@@ -127,13 +127,15 @@ class HBRobotCfg(BaseConfig):
         thickness = 0.01
 
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/honey_badger/urdf/hb40.urdf'
-        foot_name = "foot"
-        penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base"]
+        # Accordingly to the URDF file:
+        foot_name = "foot" 
+        penalize_contacts_on = ["l1", "l2"]
+        terminate_after_contacts_on = ["body"]
+
         self_collisions = 1 #
-        hip_link_length = 0.0838
-        thigh_link_length = 0.213
-        calf_link_length = 0.213
+        hip_link_length = 0.0752
+        thigh_link_length = 0.2
+        calf_link_length = 0.2
 
     class domain_rand:
         latency =False
