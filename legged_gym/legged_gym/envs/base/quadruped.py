@@ -392,7 +392,7 @@ class Quadruped(BaseTask):
             xs,ys,zs = self._cpg.get_CPG_RL_actions(actions_scaled,self.frequency_high,self.frequency_low,normal_forces)
             sideSign = np.array([-1,1,-1,1]) 
 
-            foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length_a1
+            foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length
             LEG_INDICES = np.array([1,0,3,2])
             for ig_idx,i in enumerate(LEG_INDICES):
                 x = xs[:,i]
@@ -656,6 +656,11 @@ class Quadruped(BaseTask):
         asset_root = os.path.dirname(asset_path)
         asset_file = os.path.basename(asset_path)
 
+        # DEBUG
+        print(f"Loading robot from: {asset_path}")
+        print(f"Asset root: {asset_root}")
+        print(f"Asset file: {asset_file}")
+
         asset_options = gymapi.AssetOptions()
         asset_options.default_dof_drive_mode = self.cfg.asset.default_dof_drive_mode
         asset_options.collapse_fixed_joints = self.cfg.asset.collapse_fixed_joints
@@ -679,9 +684,21 @@ class Quadruped(BaseTask):
 
         body_names = self.gym.get_asset_rigid_body_names(robot_asset)
         self.dof_names = self.gym.get_asset_dof_names(robot_asset)
+
+        print(f"Loaded robot with {len(body_names)} bodies:")
+        for i, name in enumerate(body_names):
+            print(f"  Body {i}: {name}")
+
+        print(f"DOF names ({len(self.dof_names)}):")
+        for i, name in enumerate(self.dof_names):
+            print(f"  DOF {i}: {name}")
+
         self.num_bodies = len(body_names)
         self.num_dofs = len(self.dof_names)
-        feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
+        # feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
+        feet_names = ["RL_foot", "RR_foot", "FR_foot", "FL_foot"]
+        print(f"Found feet with pattern '{self.cfg.asset.foot_name}': {feet_names}")
+        
         penalized_contact_names = []
         for name in self.cfg.asset.penalize_contacts_on:
             penalized_contact_names.extend([s for s in body_names if name in s])
@@ -708,7 +725,7 @@ class Quadruped(BaseTask):
                 
             rigid_shape_props = self._process_rigid_shape_props(rigid_shape_props_asset, i)
             self.gym.set_asset_rigid_shape_properties(robot_asset, rigid_shape_props)
-            anymal_handle = self.gym.create_actor(env_handle, robot_asset, start_pose, "anymal", i, self.cfg.asset.self_collisions, 0)
+            anymal_handle = self.gym.create_actor(env_handle, robot_asset, start_pose, "quadruped", i, self.cfg.asset.self_collisions, 0)
             dof_props = self._process_dof_props(dof_props_asset, i)
             self.gym.set_actor_dof_properties(env_handle, anymal_handle, dof_props)
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, anymal_handle)

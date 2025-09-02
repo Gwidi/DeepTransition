@@ -186,10 +186,10 @@ class CPG_RL():
             self.X[:,1,:] = torch.remainder(self.X[:,1,:], (2*np.pi))
 
     def compute_inverse_kinematics(self,robot,legID, x, y, z):
-        l1 = robot.hip_link_length_a1
-        l2 = robot.thigh_link_length_a1
-        l3 = robot.thigh_link_length_a1
-    
+        l1 = robot.hip_link_length
+        l2 = robot.thigh_link_length
+        l3 = robot.calf_link_length
+
         D = (y**2 + (-z)**2 - l1**2 +
         (-x)**2 - l2**2 - l3**2) / (
                  2 * l3 * l2)

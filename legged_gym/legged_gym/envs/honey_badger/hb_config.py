@@ -84,7 +84,6 @@ class HBRobotCfg(BaseConfig):
 
         pos = [0.0, 0.0, 0.32] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            # 'sp_j0': 0.,     # [rad]
             'fl_j0': 0.1,    # [rad]
             'rl_j0': -0.1,   # [rad]
             'fr_j0': -0.1 ,  # [rad]
@@ -132,9 +131,9 @@ class HBRobotCfg(BaseConfig):
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 #
-        hip_link_length_a1 = 0.0838
-        thigh_link_length_a1 = 0.213
-        calf_link_length_a1 = 0.213
+        hip_link_length = 0.0838
+        thigh_link_length = 0.213
+        calf_link_length = 0.213
 
     class domain_rand:
         latency =False

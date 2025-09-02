@@ -131,9 +131,9 @@ class LeggedRobotCfg(BaseConfig):
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 #
-        hip_link_length_a1 = 0.0838
-        thigh_link_length_a1 = 0.213
-        calf_link_length_a1 = 0.213
+        hip_link_length = 0.0838
+        thigh_link_length = 0.213
+        calf_link_length = 0.213
 
     class domain_rand:
         latency =False
