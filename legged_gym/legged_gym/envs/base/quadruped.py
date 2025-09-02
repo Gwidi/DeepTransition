@@ -656,11 +656,6 @@ class Quadruped(BaseTask):
         asset_root = os.path.dirname(asset_path)
         asset_file = os.path.basename(asset_path)
 
-        # DEBUG
-        print(f"Loading robot from: {asset_path}")
-        print(f"Asset root: {asset_root}")
-        print(f"Asset file: {asset_file}")
-
         asset_options = gymapi.AssetOptions()
         asset_options.default_dof_drive_mode = self.cfg.asset.default_dof_drive_mode
         asset_options.collapse_fixed_joints = self.cfg.asset.collapse_fixed_joints
@@ -685,19 +680,9 @@ class Quadruped(BaseTask):
         body_names = self.gym.get_asset_rigid_body_names(robot_asset)
         self.dof_names = self.gym.get_asset_dof_names(robot_asset)
 
-        print(f"Loaded robot with {len(body_names)} bodies:")
-        for i, name in enumerate(body_names):
-            print(f"  Body {i}: {name}")
-
-        print(f"DOF names ({len(self.dof_names)}):")
-        for i, name in enumerate(self.dof_names):
-            print(f"  DOF {i}: {name}")
-
         self.num_bodies = len(body_names)
         self.num_dofs = len(self.dof_names)
-        # feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
-        feet_names = ["RL_foot", "RR_foot", "FR_foot", "FL_foot"]
-        print(f"Found feet with pattern '{self.cfg.asset.foot_name}': {feet_names}")
+        feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
         
         penalized_contact_names = []
         for name in self.cfg.asset.penalize_contacts_on:
