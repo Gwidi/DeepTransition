@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class HBRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 124
+        num_observations = 128
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12 
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -91,14 +91,14 @@ class HBRobotCfg(BaseConfig):
             'rr_j0': 0.1,    # [rad]
 
             'fl_j1': -0.8,   # [rad]
-            'rl_j1': -1,     # [rad]
+            'rl_j1': -1.0,     # [rad]
             'fr_j1': 0.8,    # [rad]
             'rr_j1': 1.,     # [rad]
 
             'fl_j2': 1.5,    # [rad]
-            'rl_j2': -1.5,   # [rad]
+            'rl_j2': 1.5,   # [rad]
             'fr_j2': -1.5,   # [rad]
-            'rr_j2': 1.5,    # [rad]
+            'rr_j2': -1.5,    # [rad]
         }
 
     class control:
@@ -117,8 +117,8 @@ class HBRobotCfg(BaseConfig):
         fix_base_link = False # fixe the base of the robot
         default_dof_drive_mode = 3 # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
         replace_cylinder_with_capsule = True # replace collision cylinders with capsules, leads to faster/more stable simulation
-        flip_visual_attachments = True # Some .obj meshes must be flipped from y-up to z-up
-        
+        flip_visual_attachments = False # Some .obj meshes must be flipped from y-up to z-up. Check your model's orientation.
+
         density = 0.001
         angular_damping = 0.
         linear_damping = 0.
