@@ -44,8 +44,8 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
 
 :floppy_disk: Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
    
-   - `virtualenv -p python3 DeepTransitionENV`
-   - `source DeepTransitionENV/bin/activate`
+   - `conda create -n DeepTransitionENV python=3.8`
+   - `conda activate DeepTransitionENV`
      
 :page_facing_up:  Clone this repository and install dependencies:
 
@@ -68,6 +68,9 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
    
 :mechanical_leg:  Install legged_gym
    -  `cd legged_gym && pip install -e .`
+
+: Importing module 'gym_38'
+   -  `export LD_LIBRARY_PATH=~/anaconda3/envs/DeepTransitionENV/lib:$LD_LIBRARY_PATH`
 
 ## :school: CODE STRUCTURE  ##
 The training environment is defined by an env file (`quadruped.py`) and a config file (`quadruped_config.py`) that these classes use inheritance. quadruped_config.py includes body names, default_joint_positions and PD gains, reward weights,etc. You need to modify the reward weights in quadruped_config.py and train the policy to reproduce the result of the paper.
