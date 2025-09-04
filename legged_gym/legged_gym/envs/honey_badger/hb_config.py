@@ -126,7 +126,7 @@ class HBRobotCfg(BaseConfig):
         armature = 0.
         thickness = 0.01
 
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/honey_badger/urdf/hb40.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/honey_badger/urdf/hb40s.urdf'
         # Accordingly to the URDF file:
         foot_name = "foot" 
         penalize_contacts_on = ["l1", "l2"]
