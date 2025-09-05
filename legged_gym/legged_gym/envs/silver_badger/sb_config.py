@@ -138,6 +138,7 @@ class SBRobotCfg(BaseConfig):
         hip_link_length = 0.0752
         thigh_link_length = 0.2
         calf_link_length = 0.2
+        spine_locked = True
 
     class domain_rand:
         latency =False
