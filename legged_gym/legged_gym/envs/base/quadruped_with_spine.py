@@ -321,11 +321,10 @@ class QuadrupedWithSpine(BaseTask):
                 props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
                 props["stiffness"][i] = 0.0
                 props["damping"][i] = 0.0
-            if self.cfg.asset.spine_locked: # lock spine
-                props["driveMode"][6] = gymapi.DOF_MODE_LOCKED       
+            if self.cfg.asset.spine_locked: # lock spine       
                 self.dof_pos_limits[6,0] = -0.0001
                 self.dof_pos_limits[6,1] = 0.0001
-
+                
         return props
 
     def _process_rigid_body_props(self, props, env_id):
