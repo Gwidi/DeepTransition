@@ -39,9 +39,9 @@ class CPG_RL():
           couple=False,
           coupling_strength=1,
           time_step=0.001,
-          robot_height=0.3, 
-          des_step_len=0.03, 
-          ground_clearance=0.07,  
+          robot_height=0.32, 
+          des_step_len=0.03,
+          ground_clearance=0.04,
           ground_penetration=0.01,
           num_envs=1,
           device=None,
@@ -132,7 +132,7 @@ class CPG_RL():
         new_a = torch.clip(new_a, lower_lim, upper_lim)
         return new_a
 
-    def get_CPG_RL_actions(self,actions,frequency_high,frequency_low,normal_forces):
+    def get_CPG_RL_actions(self, actions, frequency_high, frequency_low, normal_forces):
         """ Map RL actions to CPG signals """
         MU_LOW = self.mu_low[0]
         MU_UPP = self.mu_up[0]
@@ -161,6 +161,7 @@ class CPG_RL():
         z = torch.where(torch.sin(self.X[:,1,:]) > 0, 
                         -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:]),
                         -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:]))
+    
         return x, y, z
 
     def integrate_oscillator_equations(self):
@@ -193,15 +194,16 @@ class CPG_RL():
         D = (y**2 + (-z)**2 - l1**2 +
         (-x)**2 - l2**2 - l3**2) / (
                  2 * l3 * l2)
-
         D = torch.clip(D, -1.0, 1.0)
 
         # check Right vs Left leg for hip angle
         sideSign = 1
         if legID == 0 or legID == 2:
-          sideSign = -1
+            sideSign = -1
 
         knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
+        if legID == 1 or legID == 3:
+            knee_angle *= -1 # reversed tf 
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
@@ -210,5 +212,3 @@ class CPG_RL():
             l2 + l3 * torch.cos(knee_angle)) 
         output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)  
         return output
-                    
-
