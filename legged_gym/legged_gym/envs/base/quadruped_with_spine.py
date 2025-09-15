@@ -397,12 +397,28 @@ class QuadrupedWithSpine(BaseTask):
 
             foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length
             LEG_INDICES = np.array([1,0,3,2])
+            if self.cfg.asset.spine_locked:
+                des_joint_pos[:, 6] = 0.0  # sp_j0 = 0
             for ig_idx,i in enumerate(LEG_INDICES):
                 x = xs[:,i]
                 z = zs[:,i]
                 y = sideSign[i] * foot_y  + ys[:,i]
                 robot_length=self.cfg.asset
-                des_joint_pos[:, 3*ig_idx:3*ig_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
+                if ig_idx == 0:    # FL 
+                    start_idx = 0  # index 0, 1, 2
+                elif ig_idx == 1:  # FR 
+                    start_idx = 3  # index 3, 4, 5
+                elif ig_idx == 2:  # RL  (po spine)
+                    start_idx = 7  # index 7, 8, 9
+                elif ig_idx == 3:  # RR 
+                    start_idx = 10  # index 10, 11, 12
+                des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
+            
+            hip_roll_indices = [0, 3, 7, 10]  # FL, FR, RL, RR hip_roll
+            hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
+            for leg_idx in range(4):
+                des_joint_pos[:, hip_roll_indices[leg_idx]] += hip_roll_offset[leg_idx]
+
             self.dof_des_pos = des_joint_pos
             torques = self.p_gains*(self.dof_des_pos - self.dof_pos) - self.d_gains*self.dof_vel 
         else:
