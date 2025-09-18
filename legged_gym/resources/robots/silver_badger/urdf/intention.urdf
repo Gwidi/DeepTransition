@@ -73,11 +73,11 @@
     <axis xyz="1 0 0"/>
     <limit effort="48.0" lower="-0.785" upper="0.785" velocity="3.15"/>
   </joint>
-  <joint name="root" type="floating">
+  <joint name="root" type="fixed">
     <parent link="base_link"/>
     <child link="body"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
-    <axis xyz="0 0 0"/>
+    <!-- <axis xyz="0 0 0"/> -->
   </joint>
   <!--
   ##########################################################
@@ -442,7 +442,7 @@
     <parent link="fr_l2"/>
     <child link="fr_foot"/>
     <origin rpy="0 0 0" xyz="0.0054 -0.200 0"/>
-    <axis xyz="0.0 0 0"/>
+    <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
   <joint armature="0.01" name="fl_j0" type="continuous">
     <parent link="body"/>
@@ -469,7 +469,7 @@
     <parent link="fl_l2"/>
     <child link="fl_foot"/>
     <origin rpy="0 0 0" xyz="0.0054 0.200 0"/>
-    <axis xyz="0.0 0 0"/>
+    <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
   <joint armature="0.01" name="rl_j0" type="continuous">
     <parent link="rear"/>
@@ -496,7 +496,7 @@
     <parent link="rl_l2"/>
     <child link="rl_foot"/>
     <origin rpy="0 0 0" xyz="0.0054 0.200 0"/>
-    <axis xyz="0.0 0 0"/>
+    <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
   <joint armature="0.01" name="rr_j0" type="continuous">
     <parent link="rear"/>
@@ -523,6 +523,6 @@
     <parent link="rr_l2"/>
     <child link="rr_foot"/>
     <origin rpy="0 0 0" xyz="0.0054 -0.200 0"/>
-    <axis xyz="0.0 0 0"/>
+    <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
 </robot>
