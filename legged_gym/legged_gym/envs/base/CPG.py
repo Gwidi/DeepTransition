@@ -35,7 +35,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="TROT",
+          gait="GALLOP", # TROT or GALLOP
           couple=False,
           coupling_strength=1,
           time_step=0.001,
@@ -93,13 +93,23 @@ class CPG_RL():
         trot = torch.tensor([[ 0, 1, 1, 0 ],
                             [-1, 0, 0,-1 ],
                             [-1, 0, 0,-1 ],
-                            [ 0, 1, 1, 0 ]],dtype=torch.float, device=device, requires_grad=False) 
+                            [ 0, 1, 1, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        gallop = torch.tensor([[ 1, 1, 0, 0 ],
+                                [0, 0, -1,-1 ],
+                                [0, 0, -1,-1 ],
+                                [ 1, 1, 0, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+        gallop = np.pi * gallop
         trot = np.pi * trot
         self.PHI_trot = trot
+        self.PHI_gallop = gallop
 
         if gait == "TROT":
             print('TROT')
             self.PHI = self.PHI_trot
+        elif gait == "GALLOP":
+            print('GALLOP')
+            self.PHI = self.PHI_gallop
         else:
             raise ValueError( gait + 'not implemented.')
 
