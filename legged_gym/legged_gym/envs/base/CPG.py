@@ -35,7 +35,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="GALLOP", # TROT or GALLOP
+          gait="TROT", # TROT or GALLOP
           couple=False,
           coupling_strength=1,
           time_step=0.001,
@@ -49,15 +49,17 @@ class CPG_RL():
           mu_low = 1.0,
           mu_up = 4.0,
           max_step_len = 0.03,
+          num_CPGs = 4,
         ):
         self._rl_task_string = rl_task_string
         #global device
         self._device = device 
-        self.X = torch.zeros(num_envs,2,4,dtype=torch.float, device=device, requires_grad=False)
-        self.X_dot = torch.zeros(num_envs,2,4,dtype=torch.float, device=device, requires_grad=False)
-        self.d2X = torch.zeros(num_envs,1,4,dtype=torch.float, device=device, requires_grad=False)
+        self.num_CPGs = num_CPGs 
+        self.X = torch.zeros(num_envs,2,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
+        self.X_dot = torch.zeros(num_envs,2,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
+        self.d2X = torch.zeros(num_envs,1,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
         self.num_envs = num_envs
-        self._mu = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
+        self._mu = torch.zeros(num_envs,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
         if "OFFSETX" in rl_task_string:
             self._offset_x= torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
             self._offset_z = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
@@ -71,9 +73,9 @@ class CPG_RL():
         self._coupling_strength = coupling_strength
         self._dt = time_step
         self._set_gait(gait)
- 
-        self.X[:,0,:] = torch.rand(num_envs,4,device=self._device) * .1
-        self.X[:,1,:] = self.PHI[0,:] #*0.0
+        
+        self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
+        self.X[:,1,:4] = self.PHI[0,:] #*0.0
 
         self._ground_clearance = ground_clearance 
         self._ground_penetration = ground_penetration
@@ -82,8 +84,8 @@ class CPG_RL():
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
-        self.X[env_ids,0,:] = torch.rand(len(env_ids),4,device=self._device) * .1
-        self.X[env_ids,1,:] = self.PHI[0,:] #*0.0
+        self.X[env_ids,0,:] = torch.rand(len(env_ids),self.num_CPGs,device=self._device) * .1
+        self.X[env_ids,1,:4] = self.PHI[0,:] #*0.0
         self.X_dot[env_ids,:,:] = 0.
  
 
@@ -126,10 +128,10 @@ class CPG_RL():
         self._integrate_hopf_equations()
 
         # map CPG variables to Cartesian foot xz positions
-        x = self.X[:,0,:] * torch.cos(self.X[:,1,:]) 
-        z = torch.where(torch.sin(self.X[:,1,:]) > 0, 
-                        -self._robot_height + self._ground_clearance*torch.sin(self.X[:,1,:]),# swing)
-                        -self._robot_height + self._ground_penetration*torch.sin(self.X[:,1,:]))
+        x = self.X[:,0,:4] * torch.cos(self.X[:,1,:4]) 
+        z = torch.where(torch.sin(self.X[:,1,:4]) > 0, 
+                        -self._robot_height + self._ground_clearance*torch.sin(self.X[:,1,:4]),# swing)
+                        -self._robot_height + self._ground_penetration*torch.sin(self.X[:,1,:4]))
 
         return -self._des_step_len * x, z
 
@@ -147,32 +149,45 @@ class CPG_RL():
         MU_LOW = self.mu_low[0]
         MU_UPP = self.mu_up[0]
         MAX_STEP_LEN = self.max_step_len[0]
+        MAX_SPINE_ANGLE = torch.tensor(30.0 * np.pi / 180) # 30° in radians
   
         device = self._device 
         a = torch.clip(actions, -1, 1)
-        self._mu = self._scale_helper(a[:,:4],MU_LOW**2,MU_UPP**2) 
-        self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high)
+        if "SPINE" in self._rl_task_string:
+            self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2) 
+            self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high)
+        else:
+            self._mu = self._scale_helper(a[:,:4],MU_LOW**2,MU_UPP**2) 
+            self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high)
         
         if "OFFSETX" in self._rl_task_string:
-          offset = self._scale_helper( a[:,8:12],-0.07, 0.07) 
-          self.update_offset_x(offset)
+            if "SPINE" in self._rl_task_string:
+                offset = self._scale_helper( a[:,10:14],-0.07, 0.07)
+            else:
+                offset = self._scale_helper( a[:,8:12],-0.07, 0.07) 
+          
+            self.update_offset_x(offset)
 
         self.integrate_oscillator_equations()
         
-        x = torch.clip(self.X[:,0,:],MU_LOW,MU_UPP) 
+        x = torch.clip(self.X[:,0,:4],MU_LOW,MU_UPP) 
         x = MAX_STEP_LEN * (x - MU_LOW) / (MU_UPP - MU_LOW)
  
         if "OFFSETX" in self._rl_task_string:
-            x = -x * torch.cos(self.X[:,1,:]) - self._offset_x
+            x = -x * torch.cos(self.X[:,1,:4]) - self._offset_x
             y = self.y
         else:
-            x = -x * torch.cos(self.X[:,1,:]) 
+            x = -x * torch.cos(self.X[:,1,:4]) 
             y = self.y  
-        z = torch.where(torch.sin(self.X[:,1,:]) > 0, 
-                        -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:]),
-                        -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:]))
+        z = torch.where(torch.sin(self.X[:,1,:4]) > 0, 
+                        -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:4]),
+                        -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:4]))
+        if "SPINE" in self._rl_task_string:
+            sp = MAX_SPINE_ANGLE * self.X[:,0,4] * torch.sin(self.X[:,1,4])
+        else: 
+            sp = 0.0
     
-        return x, y, z
+        return x, y, z, sp
 
     def integrate_oscillator_equations(self):
         device = self._device 

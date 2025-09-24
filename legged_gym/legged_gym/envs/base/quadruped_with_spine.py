@@ -364,8 +364,8 @@ class QuadrupedWithSpine(BaseTask):
         """
         self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        self.frequency_high[env_ids,:] = torch.ones((len(env_ids),4), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_max
-        self.frequency_low[env_ids,:] = torch.ones((len(env_ids),4), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_low
+        self.frequency_high[env_ids,:] = torch.ones((len(env_ids),self.cfg.asset.num_CPGs), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_max
+        self.frequency_low[env_ids,:] = torch.ones((len(env_ids),self.cfg.asset.num_CPGs), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_low
 
         
         if self.cfg.commands.heading_command:
@@ -392,13 +392,12 @@ class QuadrupedWithSpine(BaseTask):
 
         if "CPG" in control_type:
             des_joint_pos = torch.zeros_like(self.torques,device=self.device)
-            xs,ys,zs = self._cpg.get_CPG_RL_actions(actions_scaled,self.frequency_high,self.frequency_low,normal_forces)
+            xs,ys,zs, sp = self._cpg.get_CPG_RL_actions(actions_scaled,self.frequency_high,self.frequency_low,normal_forces)
             sideSign = np.array([-1,1,-1,1]) 
 
             foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length
             LEG_INDICES = np.array([1,0,3,2])
-            if self.cfg.asset.spine_locked:
-                des_joint_pos[:, 6] = 0.0  # sp_j0 = 0
+            des_joint_pos[:, 6] = sp  # spine pitch
             for ig_idx,i in enumerate(LEG_INDICES):
                 x = xs[:,i]
                 z = zs[:,i]
@@ -408,7 +407,7 @@ class QuadrupedWithSpine(BaseTask):
                     start_idx = 0  # index 0, 1, 2
                 elif ig_idx == 1:  # FR 
                     start_idx = 3  # index 3, 4, 5
-                elif ig_idx == 2:  # RL  (po spine)
+                elif ig_idx == 2:  # RL  (after spine)
                     start_idx = 7  # index 7, 8, 9
                 elif ig_idx == 3:  # RR 
                     start_idx = 10  # index 10, 11, 12
@@ -545,9 +544,8 @@ class QuadrupedWithSpine(BaseTask):
                                             device=self.device,
                                             requires_grad=False)
 
-  
-        self.frequency_high = torch.zeros(self.num_envs,4, dtype=torch.float, device=self.device, requires_grad=False)             
-        self.frequency_low = torch.zeros(self.num_envs,4, dtype=torch.float, device=self.device, requires_grad=False) 
+        self.frequency_high = torch.zeros(self.num_envs,self.cfg.asset.num_CPGs, dtype=torch.float, device=self.device, requires_grad=False)             
+        self.frequency_low = torch.zeros(self.num_envs,self.cfg.asset.num_CPGs, dtype=torch.float, device=self.device, requires_grad=False) 
         self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False)
         self.last_contacts = torch.zeros(self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False)
@@ -569,7 +567,7 @@ class QuadrupedWithSpine(BaseTask):
  
         if "CPG" in self.cfg.control.control_type:
             # init CPG 
-            self._cpg = CPG_RL(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device,rl_task_string=self.cfg.control.control_type)
+            self._cpg = CPG_RL(time_step=self.sim_params.dt,num_envs=self.num_envs,device=self.device,rl_task_string=self.cfg.control.control_type, num_CPGs=self.cfg.asset.num_CPGs)
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
