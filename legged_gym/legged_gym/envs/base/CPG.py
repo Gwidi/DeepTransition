@@ -183,7 +183,7 @@ class CPG_RL():
                         -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:4]),
                         -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:4]))
         if "SPINE" in self._rl_task_string:
-            sp = MAX_SPINE_ANGLE * self.X[:,0,4] * torch.sin(self.X[:,1,4])
+            sp = self.X[:,0,4] * torch.sin(self.X[:,1,4])
         else: 
             sp = 0.0
     
