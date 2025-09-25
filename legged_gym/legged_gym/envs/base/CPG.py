@@ -76,6 +76,7 @@ class CPG_RL():
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
         self.X[:,1,:4] = self.PHI[0,:] #*0.0
+        self.X[:,1,4] = 0.0 # spine initial phase
 
         self._ground_clearance = ground_clearance 
         self._ground_penetration = ground_penetration
@@ -86,6 +87,7 @@ class CPG_RL():
         self._mu[env_ids,:] = 0
         self.X[env_ids,0,:] = torch.rand(len(env_ids),self.num_CPGs,device=self._device) * .1
         self.X[env_ids,1,:4] = self.PHI[0,:] #*0.0
+        self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
  
 
@@ -149,7 +151,7 @@ class CPG_RL():
         MU_LOW = self.mu_low[0]
         MU_UPP = self.mu_up[0]
         MAX_STEP_LEN = self.max_step_len[0]
-        MAX_SPINE_ANGLE = torch.tensor(30.0 * np.pi / 180) # 30° in radians
+        MAX_SPINE_ANGLE = torch.tensor(5.0 * np.pi / 180) # 15° in radians
   
         device = self._device 
         a = torch.clip(actions, -1, 1)
@@ -171,7 +173,9 @@ class CPG_RL():
         self.integrate_oscillator_equations()
         
         x = torch.clip(self.X[:,0,:4],MU_LOW,MU_UPP) 
+        sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP) 
         x = MAX_STEP_LEN * (x - MU_LOW) / (MU_UPP - MU_LOW)
+        sp = MAX_SPINE_ANGLE * (sp - MU_LOW) / (MU_UPP - MU_LOW)
  
         if "OFFSETX" in self._rl_task_string:
             x = -x * torch.cos(self.X[:,1,:4]) - self._offset_x
@@ -183,7 +187,7 @@ class CPG_RL():
                         -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:4]),
                         -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:4]))
         if "SPINE" in self._rl_task_string:
-            sp = self.X[:,0,4] * torch.sin(self.X[:,1,4])
+            sp = sp * torch.sin(self.X[:,1,4])
         else: 
             sp = 0.0
     
