@@ -26,9 +26,9 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 131
+        num_observations = 136 # 136 with active spine
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 13 # 13 DOFs
+        num_actions = 14 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -103,7 +103,7 @@ class SBRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX'
+        control_type = 'CPG_OFFSETX_SPINE'
         action_scale = 0.25
 
         decimation = 10
@@ -138,7 +138,8 @@ class SBRobotCfg(BaseConfig):
         hip_link_length = 0.0752
         thigh_link_length = 0.2
         calf_link_length = 0.2
-        spine_locked = True
+        spine_locked = False
+        num_CPGs = 5 # 4 for legs only, 5 for legs + spine
 
     class domain_rand:
         latency =False
