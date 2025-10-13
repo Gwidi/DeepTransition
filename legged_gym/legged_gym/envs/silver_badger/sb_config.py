@@ -59,7 +59,6 @@ class SBRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
         # mesh_type = 'plane'
-        measure_heights = True
 
 
     class commands:
