@@ -26,8 +26,8 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 136 # 136 with active spine
-        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_observations = 73 # 136 with active spine
+        num_privileged_obs = 136 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 14 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
@@ -35,7 +35,7 @@ class SBRobotCfg(BaseConfig):
         play = False
 
     class terrain:
-        mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
         horizontal_scale = 0.05 # [m]
         vertical_scale = 0.1 # [m]
         border_size = 0 # [m]
