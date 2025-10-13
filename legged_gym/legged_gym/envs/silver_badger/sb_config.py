@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 76 # 136 with active spine
+        num_observations = 136 # 136 with active spine
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 14 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -35,7 +35,7 @@ class SBRobotCfg(BaseConfig):
         play = False
 
     class terrain:
-        mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
         horizontal_scale = 0.05 # [m]
         vertical_scale = 0.1 # [m]
         border_size = 0 # [m]
@@ -44,7 +44,7 @@ class SBRobotCfg(BaseConfig):
         static_friction = 1.0
         dynamic_friction = 1.0
         restitution = 0.
-        measure_heights = False
+        measure_heights = True
 
         measured_points_x = [  0.13, 0.18, 0.23, 0.28, 0.32, 0.37, 0.43, 0.48,0.52,0.57,0.62,0.67 ] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.23, -0.15, 0.,0.15, 0.23]
@@ -59,6 +59,7 @@ class SBRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
         # mesh_type = 'plane'
+        measure_heights = True
 
 
     class commands:
