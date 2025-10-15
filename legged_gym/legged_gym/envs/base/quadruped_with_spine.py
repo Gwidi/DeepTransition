@@ -219,7 +219,7 @@ class QuadrupedWithSpine(BaseTask):
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
-                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    #self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
