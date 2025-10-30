@@ -105,8 +105,8 @@ class HBRobotCfg(BaseConfig):
         action_scale = 0.25
 
         decimation = 10
-        stiffness = {'joint': 100.}  # [N*m/rad]
-        damping = {'joint': 2.0}     # [N*m*s/rad]
+        stiffness = {'j': 100}  # [N*m/rad]
+        damping = {'j': 2.0}     # [N*m*s/rad]
 
 
 
@@ -126,16 +126,16 @@ class HBRobotCfg(BaseConfig):
         armature = 0.
         thickness = 0.01
 
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/honey_badger/urdf/hb40s.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/honey_badger/urdf/hb40.urdf'
         # Accordingly to the URDF file:
         foot_name = "foot" 
         penalize_contacts_on = ["l1", "l2"]
         terminate_after_contacts_on = ["body"]
 
         self_collisions = 1 #
-        hip_link_length = 0.0752
-        thigh_link_length = 0.2
-        calf_link_length = 0.2
+        hip_link_length = 0.0525 
+        thigh_link_length = 0.18
+        calf_link_length = 0.177
 
     class domain_rand:
         latency =False
