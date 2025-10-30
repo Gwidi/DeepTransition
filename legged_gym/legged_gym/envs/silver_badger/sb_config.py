@@ -199,7 +199,7 @@ class SBRobotCfg(BaseConfig):
         lookat = [8., 2, 1.]  # [m]
 
     class sim:
-        dt = 0.001 #0.005
+        dt = 0.005 #0.005
         substeps = 1
         gravity = [0., 0. ,-9.81]  # [m/s^2]
         up_axis = 1  # 0 is y, 1 is z
