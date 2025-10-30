@@ -69,8 +69,6 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
 :mechanical_leg:  Install legged_gym
    -  `cd legged_gym && pip install -e .`
 
-: Importing module 'gym_38'
-   -  `export LD_LIBRARY_PATH=~/anaconda3/envs/DeepTransitionENV/lib:$LD_LIBRARY_PATH`
 
 ## :school: CODE STRUCTURE  ##
 The training environment is defined by an env file (`quadruped.py`) and a config file (`quadruped_config.py`) that these classes use inheritance. quadruped_config.py includes body names, default_joint_positions and PD gains, reward weights,etc. You need to modify the reward weights in quadruped_config.py and train the policy to reproduce the result of the paper.
