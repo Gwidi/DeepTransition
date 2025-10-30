@@ -106,8 +106,8 @@ class SBRobotCfg(BaseConfig):
         action_scale = 0.25
 
         decimation = 10
-        stiffness = {'j': 100.}  # [N*m/rad]
-        damping = {'j': 2.0}     # [N*m*s/rad]
+        stiffness = {'j': 20.}  # [N*m/rad]
+        damping = {'j': 0.5}     # [N*m*s/rad]
 
 
 
