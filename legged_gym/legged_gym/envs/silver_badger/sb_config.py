@@ -106,8 +106,8 @@ class SBRobotCfg(BaseConfig):
         action_scale = 0.25
 
         decimation = 10
-        stiffness = {'j': 20.}  # [N*m/rad]
-        damping = {'j': 0.5}     # [N*m*s/rad]
+        stiffness = {'j': 100.}  # [N*m/rad]
+        damping = {'j': 2.0}     # [N*m*s/rad]
 
 
 
@@ -182,7 +182,7 @@ class SBRobotCfg(BaseConfig):
         clip_actions = 100 #4 #100.
 
     class noise:
-        add_noise = False #True
+        add_noise = True
         noise_level = 1.0 # scales other values
         class noise_scales:
             dof_pos = 0.03 
