@@ -198,7 +198,7 @@ class CPG_RL():
         X_dot = self.X_dot.clone() 
         d2X = self.d2X.clone()
         _a = 150
-        dt = 0.001
+        dt = 0.005 
         for _ in range(int(self._dt/dt)):
             d2X_prev = self.d2X.clone()
             X_dot_prev = self.X_dot.clone()
