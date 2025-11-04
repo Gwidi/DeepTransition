@@ -578,7 +578,7 @@ class QuadrupedWithSpine(BaseTask):
  
         if "CPG" in self.cfg.control.control_type:
             # init CPG 
-            self._cpg = CPG_RL(time_step=0.02,num_envs=self.num_envs,device=self.device,rl_task_string=self.cfg.control.control_type, num_CPGs=self.cfg.asset.num_CPGs)
+            self._cpg = CPG_RL(time_step=self.sim_params.dt, num_envs=self.num_envs, device=self.device, rl_task_string=self.cfg.control.control_type, num_CPGs=self.cfg.asset.num_CPGs)
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
