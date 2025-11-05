@@ -43,7 +43,12 @@ COPY --chown=gymuser . .
 
 # install gym modules
 ENV PATH="/home/gymuser/.local/bin:$PATH"
+WORKDIR /home/gymuser/DeepTransition/docker
 RUN cd python && pip install -q -e .
+WORKDIR /home/gymuser/DeepTransition
+RUN cd rsl_rl  && pip install -e .
+WORKDIR /home/gymuser/DeepTransition
+RUN cd legged_gym && pip install -e .
 
 WORKDIR /home/gymuser/DeepTransition
 
