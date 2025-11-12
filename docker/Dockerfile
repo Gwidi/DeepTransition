@@ -20,7 +20,10 @@ RUN apt-get update \
  pigz \
  git \
  libegl1 \
- git-lfs
+ git-lfs \
+ wget \
+ bzip2 \
+ ca-certificates
 
 # Force gcc 8 to avoid CUDA 10 build issues on newer base OS
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
@@ -38,12 +41,19 @@ WORKDIR /opt/isaacgym
 RUN useradd --create-home gymuser
 USER gymuser
 
+# Install Miniconda as gymuser
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    bash /tmp/miniconda.sh -b -p /home/gymuser/miniconda3 && \
+    rm /tmp/miniconda.sh
+
+# Add conda to PATH
+ENV PATH="/home/gymuser/miniconda3/bin:$PATH"
+
+# Initialize conda for bash
+RUN conda init bash
+
 # copy gym repo to docker
 COPY --chown=gymuser /docker/python /opt/isaacgym/python
-
-# install gym modules
-ENV PATH="/home/gymuser/.local/bin:$PATH"
-RUN cd python && pip install -q -e .
 
 WORKDIR /home/gymuser/DeepTransition
 
