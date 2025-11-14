@@ -425,9 +425,9 @@ class QuadrupedWithSpine(BaseTask):
                 des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
             
             hip_roll_indices = [0, 3, 7, 10]  # FL, FR, RL, RR hip_roll
-            hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
-            for leg_idx in range(4):
-                des_joint_pos[:, hip_roll_indices[leg_idx]] += hip_roll_offset[leg_idx]
+            # hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
+            # for leg_idx in range(4):
+            #     des_joint_pos[:, hip_roll_indices[leg_idx]] += hip_roll_offset[leg_idx]
 
             self.dof_des_pos = des_joint_pos
             torques = self.p_gains*(self.dof_des_pos - self.dof_pos) - self.d_gains*self.dof_vel 
