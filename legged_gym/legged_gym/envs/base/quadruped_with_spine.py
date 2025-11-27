@@ -36,7 +36,7 @@ from legged_gym.utils.terrain import Terrain
 from legged_gym.utils.math import quat_apply_yaw, wrap_to_pi, torch_rand_sqrt_float
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
-from legged_gym.envs.base.CPG_active_spine import CPG_RL
+from legged_gym.envs.base.CPG import CPG_RL
 
 class QuadrupedWithSpine(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
