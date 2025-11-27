@@ -66,7 +66,7 @@
       </geometry>
     </collision>
   </link>
-  <joint name="sp_j0" type="continuous">
+  <joint name="sp_j0" type="fixed" dont_collapse="true">
     <parent link="body"/>
     <child link="rear"/>
     <origin rpy="3.14159 0 4.71" xyz="-0.141 -0.0395 0"/>
@@ -417,21 +417,21 @@
   ###########        LEGS JOINTS 0-4        ################
   ##########################################################
   -->
-  <joint armature="0.01" name="fr_j0" type="continuous">
+  <joint armature="0.01" name="fr_j0" type="revolute">
     <parent link="body"/>
     <child link="fr_l0"/>
     <origin rpy="0 0 0" xyz="0.1375 -0.064 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="fr_j1" type="continuous">
+  <joint name="fr_j1" type="revolute">
     <parent link="fr_l0"/>
     <child link="fr_l1"/>
     <origin rpy="0 0 -1.57" xyz="0.0555 -0.0125 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="fr_j2" type="continuous">
+  <joint name="fr_j2" type="revolute">
     <parent link="fr_l1"/>
     <child link="fr_l2"/>
     <origin rpy="2.909 0 0" xyz="0.0584 -0.200 0"/>
@@ -444,21 +444,21 @@
     <origin rpy="0 0 0" xyz="0.0054 -0.200 0"/>
     <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
-  <joint armature="0.01" name="fl_j0" type="continuous">
+  <joint armature="0.01" name="fl_j0" type="revolute">
     <parent link="body"/>
     <child link="fl_l0"/>
     <origin rpy="0 0 0" xyz="0.1375 0.064 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="fl_j1" type="continuous">
+  <joint name="fl_j1" type="revolute">
     <parent link="fl_l0"/>
     <child link="fl_l1"/>
     <origin rpy="0 0 1.57" xyz="0.0555 0.0125 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="fl_j2" type="continuous">
+  <joint name="fl_j2" type="revolute">
     <parent link="fl_l1"/>
     <child link="fl_l2"/>
     <origin rpy="-2.909 0 0" xyz="0.0584 0.200 0"/>
@@ -471,21 +471,21 @@
     <origin rpy="0 0 0" xyz="0.0054 0.200 0"/>
     <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
-  <joint armature="0.01" name="rl_j0" type="continuous">
+  <joint armature="0.01" name="rl_j0" type="revolute">
     <parent link="rear"/>
     <child link="rl_l0"/>
     <origin rpy="0 0 1.57" xyz="-0.1025 0.10765 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="rl_j1" type="continuous">
+  <joint name="rl_j1" type="revolute">
     <parent link="rl_l0"/>
     <child link="rl_l1"/>
     <origin rpy="3.14159 0 1.57" xyz="0.0555 0.0125 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="rl_j2" type="continuous">
+  <joint name="rl_j2" type="revolute">
     <parent link="rl_l1"/>
     <child link="rl_l2"/>
     <origin rpy="-2.909 0 0" xyz="0.0584 0.20 0"/>
@@ -498,21 +498,21 @@
     <origin rpy="0 0 0" xyz="0.0054 0.200 0"/>
     <!-- <axis xyz="0.0 0 0"/> -->
   </joint>
-  <joint armature="0.01" name="rr_j0" type="continuous">
+  <joint armature="0.01" name="rr_j0" type="revolute">
     <parent link="rear"/>
     <child link="rr_l0"/>
     <origin rpy="0 0 1.57" xyz="0.0255 0.10725 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="rr_j1" type="continuous">
+  <joint name="rr_j1" type="revolute">
     <parent link="rr_l0"/>
     <child link="rr_l1"/>
     <origin rpy="3.14159 0 -1.57" xyz="0.0555 -0.0125 0"/>
     <axis xyz="1.0 0 0"/>
     <limit effort="16.0" lower="-1.57" upper="1.57" velocity="25.0"/>
   </joint>
-  <joint name="rr_j2" type="continuous">
+  <joint name="rr_j2" type="revolute">
     <parent link="rr_l1"/>
     <child link="rr_l2"/>
     <origin rpy="2.909 0 0" xyz="0.0584 -0.20 0"/>
