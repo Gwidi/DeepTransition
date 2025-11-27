@@ -36,7 +36,7 @@ from legged_gym.utils.terrain import Terrain
 from legged_gym.utils.math import quat_apply_yaw, wrap_to_pi, torch_rand_sqrt_float
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
-from legged_gym.envs.base.CPG import CPG_RL
+from legged_gym.envs.base.CPG_active_spine import CPG_RL
 
 class QuadrupedWithSpine(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -425,7 +425,7 @@ class QuadrupedWithSpine(BaseTask):
                 des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
             
             hip_roll_indices = [0, 3, 7, 10]  # FL, FR, RL, RR hip_roll
-            # hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
+            hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
             # for leg_idx in range(4):
             #     des_joint_pos[:, hip_roll_indices[leg_idx]] += hip_roll_offset[leg_idx]
 
