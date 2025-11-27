@@ -23,7 +23,7 @@
 
 from legged_gym.envs.base.base_config import BaseConfig
 
-class SBRobotCfg(BaseConfig):
+class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
         num_observations = 69 # 136 with active spine
@@ -106,7 +106,7 @@ class SBRobotCfg(BaseConfig):
         action_scale = 0.25
 
         decimation = 10
-        stiffness = {'j': 100.}  # [N*m/rad]
+        stiffness = {'j': 100.0}  # [N*m/rad]
         damping = {'j': 2.0}     # [N*m*s/rad]
 
 
@@ -217,7 +217,7 @@ class SBRobotCfg(BaseConfig):
             default_buffer_size_multiplier = 5
             contact_collection = 2 # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
 
-class SBRobotCfgPPO(BaseConfig):
+class SBActiveSpineRobotCfgPPO(BaseConfig):
     seed = 1
     runner_class_name = 'OnPolicyRunner'
     class policy:
