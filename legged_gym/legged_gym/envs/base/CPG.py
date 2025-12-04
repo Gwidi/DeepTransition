@@ -26,6 +26,7 @@ from warnings import WarningMessage
 import numpy as np
 import os
 import torch
+from isaacgym.torch_utils import *
 
 class CPG_RL():
     """ CPG-RL Implementation. 
@@ -36,8 +37,8 @@ class CPG_RL():
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
           gait="TROT", # TROT or GALLOP
-          couple=False,
-          coupling_strength=1,
+          couple=True,
+          coupling_strength=10,
           time_step=0.001,
           robot_height=0.32, 
           des_step_len=0.03,
@@ -60,6 +61,9 @@ class CPG_RL():
         self.d2X = torch.zeros(num_envs,1,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
         self.num_envs = num_envs
         self._mu = torch.zeros(num_envs,self.num_CPGs,dtype=torch.float, device=device, requires_grad=False)
+        self._robot_height = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * robot_height
+        self._ground_clearance = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_clearance
+        self._ground_penetration = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_penetration
         if "OFFSETX" in rl_task_string:
             self._offset_x= torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
             self._offset_z = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
@@ -79,10 +83,12 @@ class CPG_RL():
         if "SPINE" in rl_task_string:
             self.X[:,1,4] = 0.0 # spine initial phase
 
-        self._ground_clearance = ground_clearance 
-        self._ground_penetration = ground_penetration
-        self._robot_height = robot_height 
         self._des_step_len = des_step_len
+
+        self.robot_height_range = [0.18, 0.35] # min and max height of the CPG oscillation center
+        self.ground_clearance_range = [0.02, 0.12]
+        self.ground_penetration_range = [0.00, 0.15]
+        self.offset_x_range = [-0.08, 0.03]
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
@@ -91,6 +97,18 @@ class CPG_RL():
         if "SPINE" in self._rl_task_string:
             self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
+        self._resample_parameters(env_ids)
+
+    def _resample_parameters(self, env_ids):
+        """ Resample parameters h, xoff, gc, and gp  used by the CPG controller for some environments
+        Args:
+            env_ids (List[int]): Environments ids for which new parameters are needed
+        """
+        self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
+        self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
+        self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
+        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device).squeeze(1)
+
  
 
     def _set_gait(self,gait):
@@ -118,10 +136,6 @@ class CPG_RL():
             self.PHI = self.PHI_gallop
         else:
             raise ValueError( gait + 'not implemented.')
-
-
-    def update_offset_x(self,offset):
-        self._offset_x = offset
 
 
     def update(self):
@@ -164,13 +178,6 @@ class CPG_RL():
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2,MU_UPP**2) 
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high)
         
-        if "OFFSETX" in self._rl_task_string:
-            if "SPINE" in self._rl_task_string:
-                offset = self._scale_helper( a[:,10:14],-0.07, 0.07)
-            else:
-                offset = self._scale_helper( a[:,8:12],-0.07, 0.07) 
-          
-            self.update_offset_x(offset)
 
         self.integrate_oscillator_equations()
         
@@ -211,7 +218,7 @@ class CPG_RL():
             d2X = (_a * ( _a/4 * (torch.sqrt(self._mu) - X[:,0,:]) - X_dot_prev[:,0,:] )).unsqueeze(1)
             if self._couple:
                 for i in range(4):
-                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)) - self.PHI[i,:] ) ,2 )
+                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)) - self.PHI[i,:] ) , 1)
             X_dot[:,1,:] = self._omega_residuals
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 
