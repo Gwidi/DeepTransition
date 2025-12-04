@@ -37,7 +37,7 @@ class CPG_RL():
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
           gait="TROT", # TROT or GALLOP
-          couple=False,
+          couple=True,
           coupling_strength=10,
           time_step=0.001,
           robot_height=0.32, 
@@ -218,7 +218,7 @@ class CPG_RL():
             d2X = (_a * ( _a/4 * (torch.sqrt(self._mu) - X[:,0,:]) - X_dot_prev[:,0,:] )).unsqueeze(1)
             if self._couple:
                 for i in range(4):
-                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)) - self.PHI[i,:] ) , 1)
+                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI[i,:].unsqueeze(0) ) , 1)
             X_dot[:,1,:] = self._omega_residuals
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 
