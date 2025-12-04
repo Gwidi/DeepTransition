@@ -37,7 +37,7 @@ class CPG_RL():
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
           gait="TROT", # TROT or GALLOP
-          couple=True,
+          couple=False,
           coupling_strength=10,
           time_step=0.001,
           robot_height=0.32, 
@@ -107,7 +107,7 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device).squeeze(1)
+        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
 
  
 
@@ -148,8 +148,8 @@ class CPG_RL():
         # map CPG variables to Cartesian foot xz positions
         x = self.X[:,0,:4] * torch.cos(self.X[:,1,:4]) 
         z = torch.where(torch.sin(self.X[:,1,:4]) > 0, 
-                        -self._robot_height + self._ground_clearance*torch.sin(self.X[:,1,:4]),# swing)
-                        -self._robot_height + self._ground_penetration*torch.sin(self.X[:,1,:4]))
+                        -self._robot_height.unsqueeze(1) + self._ground_clearance.unsqueeze(1)*torch.sin(self.X[:,1,:4]),# swing)
+                        -self._robot_height.unsqueeze(1) + self._ground_penetration.unsqueeze(1)*torch.sin(self.X[:,1,:4]))
 
         return -self._des_step_len * x, z
 
@@ -195,8 +195,8 @@ class CPG_RL():
             x = -x * torch.cos(self.X[:,1,:4]) 
             y = self.y  
         z = torch.where(torch.sin(self.X[:,1,:4]) > 0, 
-                        -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:4]),
-                        -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:4]))
+                        -self._robot_height.unsqueeze(1) + self._ground_clearance.unsqueeze(1)   * torch.sin(self.X[:,1,:4]),
+                        -self._robot_height.unsqueeze(1) + self._ground_penetration.unsqueeze(1) * torch.sin(self.X[:,1,:4]))
         if "SPINE" in self._rl_task_string:
             sp = sp * torch.sin(self.X[:,1,4])
         else: 
