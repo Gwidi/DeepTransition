@@ -894,19 +894,28 @@ class QuadrupedWithSpine(BaseTask):
         # Tracking of linear velocity commands (xy axes)
         lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
+    
+    def _reward_penalty_lin_vel(self):
+        # Penalize velocity in axes y,z 
+        return torch.sum(torch.square(self.base_lin_vel[:, 1:3]), dim=1)
+    
+    def _reward_penalty_ang_vel(self):
+        # Penalize angular velocity in all axes
+        return torch.sum(torch.square(self.base_ang_vel), dim=1)
+    
 
-    def _reward_feet_contact_forces(self):
-        # penalize high contact forces
-        return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+    # def _reward_feet_contact_forces(self):
+    #     # penalize high contact forces
+    #     return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
 
-    def _reward_locomotion_distance(self):
-        current_base_position =  (self.root_states[:, 0])
-        forward_reward = torch.sub(current_base_position , self.last_base_pos)
-          # calculate what max distance can be over last time interval
-        max_dist = self.max_vel * (self.dt) 
-        max_task_reward = self.high_boundry_vel * (self.dt)
+    # def _reward_locomotion_distance(self):
+    #     current_base_position =  (self.root_states[:, 0])
+    #     forward_reward = torch.sub(current_base_position , self.last_base_pos)
+    #       # calculate what max distance can be over last time interval
+    #     max_dist = self.max_vel * (self.dt) 
+    #     max_task_reward = self.high_boundry_vel * (self.dt)
 
-        clipped_reward = torch.minimum( forward_reward, max_dist)
-        temp_condition = torch.gt(forward_reward , clipped_reward)
-        forward_reward = torch.where( temp_condition,torch.sub(clipped_reward ,  0.13*(torch.sub(forward_reward , clipped_reward))),clipped_reward)
-        return forward_reward
+    #     clipped_reward = torch.minimum( forward_reward, max_dist)
+    #     temp_condition = torch.gt(forward_reward , clipped_reward)
+    #     forward_reward = torch.where( temp_condition,torch.sub(clipped_reward ,  0.13*(torch.sub(forward_reward , clipped_reward))),clipped_reward)
+    #     return forward_reward
