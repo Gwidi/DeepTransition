@@ -26,16 +26,16 @@ from .base_config import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 72-8+60+4
+        num_observations = 64
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 12 
+        num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
         play = False
 
     class terrain:
-        mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
         horizontal_scale = 0.05 # [m]
         vertical_scale = 0.1 # [m]
         border_size = 0 # [m]
@@ -44,7 +44,7 @@ class LeggedRobotCfg(BaseConfig):
         static_friction = 1.0
         dynamic_friction = 1.0
         restitution = 0.
-        measure_heights = True
+        measure_heights = False
 
         measured_points_x = [  0.13, 0.18, 0.23, 0.28, 0.32, 0.37, 0.43, 0.48,0.52,0.57,0.62,0.67 ] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.23, -0.15, 0.,0.15, 0.23]
@@ -59,7 +59,6 @@ class LeggedRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
         # mesh_type = 'plane'
-        measure_heights = True
 
 
     class commands:
@@ -67,11 +66,11 @@ class LeggedRobotCfg(BaseConfig):
         num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
         heading_command = True #True # if true: compute ang vel command from heading error
-        max_vel_x = 1.2
-        freq_max= 40
-        freq_low= -5
+        max_vel_x = 3.0
+        freq_max= 8
+        freq_low= 0
         class ranges:
-            lin_vel_x = [ 1.0 , 1.243] # min max [m/s]
+            lin_vel_x = [ 0.2 , 3.0] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -101,7 +100,7 @@ class LeggedRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX'
+        control_type = 'CPG'
         action_scale = 0.25
 
         decimation = 10
@@ -151,12 +150,14 @@ class LeggedRobotCfg(BaseConfig):
 
     class rewards:
         class scales:
-            tracking_lin_vel = 0.01  
-            orientation = -20.
-            orientation_yaw = -30.003 
-            energy = -0.001 
-            locomotion_distance = 800.7230
-            feet_contact_forces = -0.01
+            tracking_lin_vel = 0.03
+            linear_velocity = -0.02
+            angular_velocity = -0.001
+            # orientation = -20.
+            # orientation_yaw = -30.003 
+            energy = -0.00001 
+            # locomotion_distance = 800.7230
+            # feet_contact_forces = -0.01
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)

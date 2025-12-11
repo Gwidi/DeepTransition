@@ -226,6 +226,19 @@ class Quadruped(BaseTask):
                                     self._cpg.X_dot[:,0,:] * 1/30, 
                                     (self._cpg.X_dot[:,1,:] - 15) * 1/30,
                                     ),dim=-1)
+            self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.projected_gravity,
+                                    self.commands[:, :3] * self.commands_scale,
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    self.actions,
+                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
+                                    (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
+                                    self._cpg.X_dot[:,0,:] * 1/30, 
+                                    (self._cpg.X_dot[:,1,:] - 15) * 1/30,
+                                    ),dim=-1)
 
 
         if self.cfg.terrain.measure_heights:
@@ -845,13 +858,21 @@ class Quadruped(BaseTask):
         return heights.view(self.num_envs, -1) * self.terrain.cfg.vertical_scale
 
     #------------ reward functions---------------
-    def _reward_orientation(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
+    # def _reward_orientation(self):
+    #     # Penalize non flat base orientation
+    #     return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
-    def _reward_orientation_yaw(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)
+    # def _reward_orientation_yaw(self):
+    #     # Penalize non flat base orientation
+    #     return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)
+
+    def _reward_linear_velocity(self):
+        # Penalize velocities in y and z directions
+        return torch.sum(torch.square(self.base_lin_vel[:, 1:3]), dim=1)
+    
+    def _reward_angular_velocity(self):
+        # Penalize angular velocities in all directions
+        return torch.sum(torch.square(self.base_ang_vel), dim=1)
 
     def _reward_energy(self):
         # Penalize energy
@@ -859,21 +880,21 @@ class Quadruped(BaseTask):
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+        lin_vel_error = torch.sum(torch.square(self.commands[:, 0] - self.base_lin_vel[:, 0]), dim=1)
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
 
-    def _reward_feet_contact_forces(self):
-        # penalize high contact forces
-        return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
+    # def _reward_feet_contact_forces(self):
+    #     # penalize high contact forces
+    #     return torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  self.cfg.rewards.max_contact_force).clip(min=0.), dim=1)
 
-    def _reward_locomotion_distance(self):
-        current_base_position =  (self.root_states[:, 0])
-        forward_reward = torch.sub(current_base_position , self.last_base_pos)
-          # calculate what max distance can be over last time interval
-        max_dist = self.max_vel * (self.dt) 
-        max_task_reward = self.high_boundry_vel * (self.dt)
+    # def _reward_locomotion_distance(self):
+    #     current_base_position =  (self.root_states[:, 0])
+    #     forward_reward = torch.sub(current_base_position , self.last_base_pos)
+    #       # calculate what max distance can be over last time interval
+    #     max_dist = self.max_vel * (self.dt) 
+    #     max_task_reward = self.high_boundry_vel * (self.dt)
 
-        clipped_reward = torch.minimum( forward_reward, max_dist)
-        temp_condition = torch.gt(forward_reward , clipped_reward)
-        forward_reward = torch.where( temp_condition,torch.sub(clipped_reward ,  0.13*(torch.sub(forward_reward , clipped_reward))),clipped_reward)
-        return forward_reward
+    #     clipped_reward = torch.minimum( forward_reward, max_dist)
+    #     temp_condition = torch.gt(forward_reward , clipped_reward)
+    #     forward_reward = torch.where( temp_condition,torch.sub(clipped_reward ,  0.13*(torch.sub(forward_reward , clipped_reward))),clipped_reward)
+    #     return forward_reward
