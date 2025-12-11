@@ -41,14 +41,6 @@ WORKDIR /opt/isaacgym
 RUN useradd --create-home gymuser
 USER gymuser
 
-# Install Miniconda as gymuser
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    bash /tmp/miniconda.sh -b -p /home/gymuser/miniconda3 && \
-    rm /tmp/miniconda.sh
-
-# Add conda to PATH
-ENV PATH="/home/gymuser/miniconda3/bin:$PATH"
-
 # Initialize conda for bash
 RUN conda init bash
 
