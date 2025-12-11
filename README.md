@@ -5,20 +5,7 @@
 
 
 # Deep Transition Repository #
-This repository provides an implementation (Simulation code) of the CPG-RL framework in the following paper:
-<td style="padding:20px;width:75%;vertical-align:middle">
-      <b> Viability Leads to the Emergence of Gait Transitions in Learning Agile Quadrupedal Locomotion on Challenging Terrains </b>
-      <br>
-      <a href="https://miladshafiee.github.io/" target="_blank">Milad Shafiee</a> , <a href="https://people.epfl.ch/guillaume.bellegarda/" target="_blank">Guillaume Bellegarda</a> and
-      <a href="https://www.epfl.ch/labs/biorob/people/ijspeert/" target="_blank">Auke Ijspeert</a>
-      <br>
-      <em><strong> Nature Communications</strong>, vol. 15, no. 1, p. 3073</em>, 2024.
-      <br>
-      <a href="https://doi.org/10.1038/s41467-024-47443-w">Paper</a> /
-      <a href="https://miladshafiee.github.io/DeepTransition/" target="_blank">Project page</a>
-    <br>
-</td>
-
+This repository builds upon an implementation (Simulation code) of the CPG-RL framework in the following papers:
 &nbsp;
 
 ```
@@ -32,10 +19,18 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
   year={2024},
   publisher={Nature Publishing Group UK London}
 }
+@article{bellegarda_allgaits_2024,
+	title = {{AllGaits}: Learning All Quadruped Gaits and Transitions},
+	url = {http://arxiv.org/abs/2411.04787},
+	doi = {10.48550/arXiv.2411.04787},
+	shorttitle = {{AllGaits}},
+	number = {{arXiv}:2411.04787},
+	publisher = {{arXiv}},
+	author = {Bellegarda, Guillaume and Shafiee, Milad and Ijspeert, Auke},
+	urldate = {2025-12-02},
+	date = {2024-11-07},
+}
 ```
-<p align="center">
-  <img src="images/exp.gif" width="100%"/>
-</p>
 
 ##  :hammer: System requirements and Installation (GPU > 8GB and CUDA needed) ##
  We need GPU and Cuda installed for running the Isaac Gym simulator. To train in the default configuration, we recommend a GPU with at least 8GB memory.
@@ -59,9 +54,8 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
    - `pip install torch==1.13.0+cu117 torchvision==0.14.0+cu117 torchaudio==0.13.0 --extra-index-url https://download.pytorch.org/whl/cu117`
    
 :cartwheeling:  Install Isaac Gym
-   - Download and install Isaac Gym Preview 3   [Download](https://developer.nvidia.com/isaac-gym)
+   - Install Isaac Gym Preview 3 
    - `cd isaacgym/python && pip install -e .`
-   - Check installation by running an example: `cd examples && python 1080_balls_of_solitude.py`
    
 :chart_with_upwards_trend:  Install rsl_rl (PPO)
    -  `cd rsl_rl  && pip install -e .` 
@@ -71,7 +65,7 @@ This repository provides an implementation (Simulation code) of the CPG-RL frame
 
 
 ## :school: CODE STRUCTURE  ##
-The training environment is defined by an env file (`quadruped.py`) and a config file (`quadruped_config.py`) that these classes use inheritance. quadruped_config.py includes body names, default_joint_positions and PD gains, reward weights,etc. You need to modify the reward weights in quadruped_config.py and train the policy to reproduce the result of the paper.
+The training environment is defined by an env file (`quadruped_with_spine.py`) and a config file ( either `silver_badger_rigid_spine.py` or `silver_badger_active_spine`). Config file include body names, default_joint_positions and PD gains, reward weights,etc. You need to modify the reward weights in quadruped_config.py and train the policy to reproduce the result of the paper.
 The config file contains two classes: one containing all the environment parameters (LeggedRobotCfg) and one for the training parameters (LeggedRobotCfgPPo).
  Central Pattern Generator (CPG) is defined by `CPG.py`.
  
@@ -80,7 +74,7 @@ The config file contains two classes: one containing all the environment paramet
 - Isaac Gym requires an NVIDIA GPU. To train in the default configuration, we recommend a GPU with at least 8GB memory. The code can run on a smaller GPU if you decrease the number of parallel environments (`Cfg.env.num_envs`) or reducing the precision of  terrain meshes. Training will be slower with fewer environments.
  An example for training (training will take less than two hours with the suggest GPUs):
  
-  `python legged_gym/scripts/train.py --task=quadruped  --max_iterations=3000 --num_envs=4096`
+  `python legged_gym/scripts/train.py --task=silver_badger_rigid_spine  --max_iterations=3000 --num_envs=4096`
   
  - To run on CPU add following arguments: `--sim_device=cpu`, `--rl_device=cpu` (sim on CPU and rl on GPU is possible). Running on CPU is not encouraged and may lead to different results.
     
@@ -88,7 +82,7 @@ The config file contains two classes: one containing all the environment paramet
     
  -  To improve performance, once the training starts (and if your are not running headless) make sure to press `v` to stop the rendering. You can then enable it later to check the progress.
     
-   - The trained policy is saved in `issacgym_anymal/logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
+   - The trained policy is saved in `legged_gym/logs/<experiment_name>/<date_time>_<run_name>/model_<iteration>.pt`. Where `<experiment_name>` and `<run_name>` are defined in the train config.
     
    -  The following command line arguments override the values set in the config files:
     
@@ -97,15 +91,6 @@ The config file contains two classes: one containing all the environment paramet
    - `--num_envs` NUM_ENVS:  Number of environments to create.
      
    - `--max_iterations` MAX_ITERATIONS:  Maximum number of training iterations.
-   
-## :runner: Play a pre-trained demo  ##
-     
- Play a pre-trained policy (It will take less than one minute):
- 
-   - `python legged_gym/scripts/play.py --task=quadruped`
-
-   - By default, the loaded policy is the last model of the last run of the experiment folder.
-
 
 ## Acknowledgement  ##
 ```
