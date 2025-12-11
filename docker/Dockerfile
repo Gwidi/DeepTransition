@@ -45,7 +45,7 @@ USER gymuser
 RUN conda init bash
 
 # copy gym repo to docker
-COPY --chown=gymuser /docker/python /opt/isaacgym/python
+COPY --chown=gymuser /isaacgym/python /opt/isaacgym/python
 
 WORKDIR /home/gymuser/DeepTransition
 
