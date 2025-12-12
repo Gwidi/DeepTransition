@@ -39,6 +39,7 @@ import torch
 from rsl_rl.algorithms import PPO
 from rsl_rl.modules import ActorCritic, ActorCriticRecurrent
 from rsl_rl.env import VecEnv
+import wandb
 
 
 class OnPolicyRunner:
@@ -82,6 +83,7 @@ class OnPolicyRunner:
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
+        wandb.init(project="cpg_rl", entity="cpg_put", sync_tensorboard=True, dir=self.log_dir)
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
