@@ -52,6 +52,9 @@ This repository builds upon an implementation (Simulation code) of the CPG-RL fr
    
    or alternatively, Install pytorch 1.13 with cuda-11.7 (tested with GPU RTX-4090 on Ubuntu 20.04)   
    - `pip install torch==1.13.0+cu117 torchvision==0.14.0+cu117 torchaudio==0.13.0 --extra-index-url https://download.pytorch.org/whl/cu117`
+
+   or install pyTorch 2.0 with cuda-11.8 (for NVIDIA H100)
+   - `pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118`
    
 :cartwheeling:  Install Isaac Gym
    - Install Isaac Gym Preview 3 
