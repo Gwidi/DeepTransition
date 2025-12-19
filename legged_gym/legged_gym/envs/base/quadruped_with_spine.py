@@ -212,13 +212,14 @@ class QuadrupedWithSpine(BaseTask):
         """
         #print(self.max_vel.unsqueeze(1).size(), self.actions.size())
         if "CPG" in self.cfg.control.control_type:
-            self.obs_buf = torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
+            self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
+                                    self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
-                                    #self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
@@ -370,19 +371,19 @@ class QuadrupedWithSpine(BaseTask):
         Args:
             env_ids (List[int]): Environments ids for which new commands are needed
         """
-        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        #self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.frequency_high[env_ids,:] = torch.ones((len(env_ids),self.cfg.asset.num_CPGs), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_max
         self.frequency_low[env_ids,:] = torch.ones((len(env_ids),self.cfg.asset.num_CPGs), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_low
 
         
-        if self.cfg.commands.heading_command:
-            self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        else:
-            self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # if self.cfg.commands.heading_command:
+        #     self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # else:
+        #     self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
         # set small commands to zero
-        self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        #self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
         self.max_vel = torch.ones(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) * self.cfg.commands.max_vel_x
 
 
@@ -878,13 +879,13 @@ class QuadrupedWithSpine(BaseTask):
         return heights.view(self.num_envs, -1) * self.terrain.cfg.vertical_scale
 
     #------------ reward functions---------------
-    def _reward_orientation(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
+    # def _reward_orientation(self):
+    #     # Penalize non flat base orientation
+    #     return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
-    def _reward_orientation_yaw(self):
-        # Penalize non flat base orientation
-        return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)
+    # def _reward_orientation_yaw(self):
+    #     # Penalize non flat base orientation
+    #     return torch.sum(torch.square(self.projected_gravity[:, 2:3]-(-1)), dim=1)
 
     def _reward_energy(self):
         # Penalize energy
@@ -892,7 +893,7 @@ class QuadrupedWithSpine(BaseTask):
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+        lin_vel_error = torch.square(self.commands[:, 0] - self.base_lin_vel[:, 0])
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
     
     def _reward_penalty_lin_vel(self):
