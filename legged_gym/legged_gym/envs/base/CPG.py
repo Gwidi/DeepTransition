@@ -37,7 +37,7 @@ class CPG_RL():
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
           gait="TROT", # TROT or GALLOP
-          couple=True,
+          couple=False,
           coupling_strength=10,
           time_step=0.001,
           robot_height=0.32, 
@@ -48,7 +48,7 @@ class CPG_RL():
           device=None,
           rl_task_string=None,
           mu_low = 1.0,
-          mu_up = 4.0,
+          mu_up = 2.0,
           max_step_len = 0.03,
           num_CPGs = 4,
         ):
@@ -107,17 +107,17 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
+        # self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
 
  
 
     def _set_gait(self,gait):
         device = self._device 
 
-        trot = torch.tensor([[ 0, 1, 1, 0 ],
-                            [-1, 0, 0,-1 ],
-                            [-1, 0, 0,-1 ],
-                            [ 0, 1, 1, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+        trot = torch.tensor([[ 0, 0.5, 0.5, 0 ], # FL, FR, RL, RR
+                            [-0.5, 0, 0,-0.5 ],
+                            [-0.5, 0, 0,-0.5 ],
+                            [ 0, 0.5, 0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
 
         gallop = torch.tensor([[ 1, 1, 0, 0 ],
                                 [0, 0, -1,-1 ],
