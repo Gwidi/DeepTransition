@@ -58,7 +58,6 @@ class LeggedRobotCfg(BaseConfig):
         terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
-        # mesh_type = 'plane'
 
 
     class commands:
@@ -125,7 +124,7 @@ class LeggedRobotCfg(BaseConfig):
         armature = 0.
         thickness = 0.01
 
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1_updated.urdf'
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/go1/urdf/go1_updated.urdf'
         foot_name = "foot"
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
@@ -251,3 +250,5 @@ class LeggedRobotCfgPPO(BaseConfig):
         load_run = -1 # -1 = last run
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
+        wandb_project ='go1'
+        wandb_entity = 'cpg_put'

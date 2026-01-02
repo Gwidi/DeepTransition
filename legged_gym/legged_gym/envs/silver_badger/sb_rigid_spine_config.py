@@ -259,6 +259,8 @@ class SBRigidSpineRobotCfgPPO(BaseConfig):
         load_run = -1 # -1 = last run
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
+        wandb_project ='silver_badger_rigid_spine'
+        wandb_entity = 'cpg_put'
 
 
   
