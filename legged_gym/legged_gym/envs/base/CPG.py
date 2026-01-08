@@ -37,12 +37,12 @@ class CPG_RL():
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
           gait="TROT", # TROT or GALLOP
-          couple=False,
+          couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.32, 
+          robot_height=0.3, 
           des_step_len=0.03,
-          ground_clearance=0.04,
+          ground_clearance=0.07,
           ground_penetration=0.01,
           num_envs=1,
           device=None,
@@ -79,7 +79,7 @@ class CPG_RL():
         self._set_gait(gait)
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
-        self.X[:,1,:4] = self.PHI[0,:] #*0.0
+        self.X[:,1,:4] = self.PHI[0,:] * 0.0
         if "SPINE" in rl_task_string:
             self.X[:,1,4] = 0.0 # spine initial phase
 
@@ -87,7 +87,7 @@ class CPG_RL():
 
         self.robot_height_range = [0.18, 0.35] # min and max height of the CPG oscillation center
         self.ground_clearance_range = [0.02, 0.12]
-        self.ground_penetration_range = [0.00, 0.15]
+        self.ground_penetration_range = [0.00, 0.015]
         self.offset_x_range = [-0.08, 0.03]
 
     def reset(self,env_ids):
@@ -107,7 +107,7 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        # self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
+        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
 
  
 
@@ -202,7 +202,7 @@ class CPG_RL():
         else: 
             sp = 0.0
     
-        return x, y, z, sp
+        return x, y, z
 
     def integrate_oscillator_equations(self):
         device = self._device 
@@ -242,8 +242,8 @@ class CPG_RL():
             sideSign = -1
 
         knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
-        if legID == 1 or legID == 3:
-            knee_angle *= -1 # reversed tf 
+        # if legID == 1 or legID == 3:
+        #     knee_angle *= -1 # reversed tf 
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
