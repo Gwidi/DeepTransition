@@ -82,7 +82,7 @@ class ActorCritic(nn.Module):
         print(f"Critic MLP: {self.critic}")
 
         # Action noise
-        self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
+        self.log_std = nn.Parameter(torch.log(init_noise_std * torch.ones(num_actions)))
         #self.std = init_noise_std * torch.ones(num_actions,dtype=torch.float, device='cuda:0', requires_grad=False)
         self.distribution = None
         # disable args validation for speedup
@@ -120,8 +120,10 @@ class ActorCritic(nn.Module):
 
     def update_distribution(self, observations):
         mean = self.actor(observations)
+        clamped_log_std = torch.clamp(self.log_std, min=-5.0, max=2.0)
+        std = clamped_log_std.exp()
 
-        base = Normal(mean, mean*0. + self.std)
+        base = Normal(mean, mean*0. + std)
         
         self.distribution = TransformedDistribution(base, [TanhTransform(cache_size=1)])
 
