@@ -132,6 +132,8 @@ class ActorCritic(nn.Module):
         return self.distribution.sample()
     
     def get_actions_log_prob(self, actions):
+        eps = 1e-6
+        actions = torch.clamp(actions, -1.0 + eps, 1.0 - eps)
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
