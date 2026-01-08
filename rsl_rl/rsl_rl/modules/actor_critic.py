@@ -115,6 +115,10 @@ class ActorCritic(nn.Module):
         return self.distribution.base_dist.stddev
     
     @property
+    def std(self):
+        return self.log_std.exp()
+    
+    @property
     def entropy(self):
         return self.distribution.base_dist.entropy().sum(dim=-1)
 
@@ -123,7 +127,7 @@ class ActorCritic(nn.Module):
         clamped_log_std = torch.clamp(self.log_std, min=-5.0, max=2.0)
         std = clamped_log_std.exp()
 
-        base = Normal(mean, mean*0. + std)
+        base = Normal(mean, std)
         
         self.distribution = TransformedDistribution(base, [TanhTransform(cache_size=1)])
 
