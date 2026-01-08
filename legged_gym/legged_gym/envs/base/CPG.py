@@ -170,7 +170,7 @@ class CPG_RL():
         MAX_SPINE_ANGLE = torch.tensor(5.0 * np.pi / 180) # 15° in radians
   
         device = self._device 
-        a = torch.clip(actions, -1, 1)
+        #a = torch.clip(actions, -1, 1)
         if "SPINE" in self._rl_task_string:
             self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2) 
             self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high)

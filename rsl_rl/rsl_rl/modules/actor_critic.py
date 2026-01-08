@@ -32,7 +32,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from torch.distributions import Normal
+from torch.distributions import Normal, TransformedDistribution, TanhTransform
 from torch.nn.modules import rnn
 
 class ActorCritic(nn.Module):
@@ -82,8 +82,8 @@ class ActorCritic(nn.Module):
         print(f"Critic MLP: {self.critic}")
 
         # Action noise
-        # self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
-        self.std = init_noise_std * torch.ones(num_actions,dtype=torch.float, device='cuda:0', requires_grad=False)
+        self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
+        #self.std = init_noise_std * torch.ones(num_actions,dtype=torch.float, device='cuda:0', requires_grad=False)
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
@@ -107,19 +107,23 @@ class ActorCritic(nn.Module):
     
     @property
     def action_mean(self):
-        return self.distribution.mean
+        raw_mean = self.distribution.base_dist.mean
+        return torch.tanh(raw_mean)
 
     @property
     def action_std(self):
-        return self.distribution.stddev
+        return self.distribution.base_dist.stddev
     
     @property
     def entropy(self):
-        return self.distribution.entropy().sum(dim=-1)
+        return self.distribution.base_dist.entropy().sum(dim=-1)
 
     def update_distribution(self, observations):
         mean = self.actor(observations)
-        self.distribution = Normal(mean, mean*0. + self.std)
+
+        base = Normal(mean, mean*0. + self.std)
+        
+        self.distribution = TransformedDistribution(base, [TanhTransform(cache_size=1)])
 
     def act(self, observations, **kwargs):
         self.update_distribution(observations)
@@ -130,7 +134,7 @@ class ActorCritic(nn.Module):
 
     def act_inference(self, observations):
         actions_mean = self.actor(observations)
-        return actions_mean
+        return torch.tanh(actions_mean)
 
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
