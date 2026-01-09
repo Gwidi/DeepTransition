@@ -113,17 +113,17 @@ class Quadruped(BaseTask):
         self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         
-        if(self.cfg.env.play):
-            if(not(self.first_iteartion)):
-               self.gap_previous= self.gap
-               self.gap=torch.any(torch.tensor(self.measured_heights)[:,0:14]<0.0,dim=-1)
-               self.gap_course_counter+=(self.gap_previous!=self.gap)
+        #if(self.cfg.env.play):
+            # if(not(self.first_iteartion)):
+            #    self.gap_previous= self.gap
+            #    self.gap=torch.any(torch.tensor(self.measured_heights)[:,0:14]<0.0,dim=-1)
+            #    self.gap_course_counter+=(self.gap_previous!=self.gap)
 
                
-               self.one_gap_detected_previous = self.one_gap_detected
-               self.one_gap_detected = torch.any(torch.tensor(self.measured_heights)[:,0:1]<0.0,dim=-1)
+            #    self.one_gap_detected_previous = self.one_gap_detected
+            #    self.one_gap_detected = torch.any(torch.tensor(self.measured_heights)[:,0:1]<0.0,dim=-1)
     
-               self.gap_counter+=(self.one_gap_detected_previous!=self.one_gap_detected)
+            #    self.gap_counter+=(self.one_gap_detected_previous!=self.one_gap_detected)
 
         self.first_iteartion = False
         self._post_physics_step_callback()
@@ -216,7 +216,7 @@ class Quadruped(BaseTask):
             self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+                                    self.commands[:, :1] * self.obs_scales.lin_vel,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
@@ -229,7 +229,7 @@ class Quadruped(BaseTask):
             self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+                                    self.commands[:, :1] * self.obs_scales.lin_vel,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
@@ -372,19 +372,19 @@ class Quadruped(BaseTask):
         Args:
             env_ids (List[int]): Environments ids for which new commands are needed
         """
-        self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        #self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.commands[env_ids, 0] = torch_rand_float(self.command_ranges["lin_vel_x"][0], self.command_ranges["lin_vel_x"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         self.frequency_high[env_ids,:] = torch.ones((len(env_ids),4), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_max
         self.frequency_low[env_ids,:] = torch.ones((len(env_ids),4), dtype=torch.float, device=self.device, requires_grad=False)*self.cfg.commands.freq_low
 
         
-        if self.cfg.commands.heading_command:
-            self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
-        else:
-            self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # if self.cfg.commands.heading_command:
+        #     self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+        # else:
+        #     self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
-        # set small commands to zero
-        self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        # # set small commands to zero
+        # self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
         self.max_vel = torch.ones(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) * self.cfg.commands.max_vel_x
 
 
