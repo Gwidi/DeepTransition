@@ -242,7 +242,7 @@ class LeggedRobotCfgPPO(BaseConfig):
         num_steps_per_env = 24#64 # per iteration
         max_iterations = 1500 # number of policy updates
         # logging
-        save_interval = 50 # check for potential saves every this many iterations
+        save_interval = 1000 # check for potential saves every this many iterations
         experiment_name = 'quadruped' 
         run_name = ''
         # load and resume
@@ -250,3 +250,5 @@ class LeggedRobotCfgPPO(BaseConfig):
         load_run = -1 # -1 = last run
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
+        wandb_project ='a1'
+        wandb_entity = 'cpg_put'
