@@ -26,7 +26,7 @@ from .base_config import BaseConfig
 class LeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 64
+        num_observations = 62
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -62,14 +62,14 @@ class LeggedRobotCfg(BaseConfig):
 
     class commands:
         save_data= False
-        num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
-        heading_command = True #True # if true: compute ang vel command from heading error
+        heading_command = False #True # if true: compute ang vel command from heading error
         max_vel_x = 3.0
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.2 , 3.0] # min max [m/s]
+            lin_vel_x = [ 0.3 , 3.0] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -80,7 +80,7 @@ class LeggedRobotCfg(BaseConfig):
         lin_vel = [0.0, 0.0, 0.0]  # x,y,z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x,y,z [rad/s]
 
-        pos = [0.0, 0.0, 0.32] # x,y,z [m]
+        pos = [0.0, 0.0, 0.3] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
             'FL_hip_joint': 0.,   # [rad]
             'RL_hip_joint': 0.,   # [rad]
@@ -99,7 +99,7 @@ class LeggedRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG'
+        control_type = 'CPG_OFFSETX'
         action_scale = 0.25
 
         decimation = 10
@@ -129,21 +129,23 @@ class LeggedRobotCfg(BaseConfig):
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 #
-        hip_link_length = 0.0838
+        hip_link_length = 0.08
         thigh_link_length = 0.213
         calf_link_length = 0.213
 
     class domain_rand:
         latency =False
         alpha_latency =0.43
-        randomize_PD = False
+        randomize_PD = True
+        stiffness_range = [30., 100.]
+        damping_range = [0.5, 2.0]
         randomize_friction = True
-        friction_range = [0.2,1.5]
+        friction_range = [0.3,1.0]
         randomize_base_mass = True 
-        added_mass_range = [-1., 6.] 
-        push_robots = False 
-        push_interval_s = 1 
-        max_push_vel_xy = 0.03 
+        added_mass_range = [0., 5.] 
+        push_robots = True 
+        push_interval_s = 15
+        max_push_vel_xy = 0.05 
         lag_timesteps = 6
         randomize_lag_timesteps = False
 
@@ -164,7 +166,7 @@ class LeggedRobotCfg(BaseConfig):
         soft_torque_limit = 1.
         max_contact_force = 180. # forces above this value are penalized
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.32 #25
+        base_height_target = 0.30 #25
 
     class normalization:
         class obs_scales:
