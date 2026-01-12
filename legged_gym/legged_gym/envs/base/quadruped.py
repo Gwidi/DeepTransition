@@ -112,18 +112,6 @@ class Quadruped(BaseTask):
         self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
-        
-        if(self.cfg.env.play):
-            if(not(self.first_iteartion)):
-               self.gap_previous= self.gap
-               self.gap=torch.any(torch.tensor(self.measured_heights)[:,0:14]<0.0,dim=-1)
-               self.gap_course_counter+=(self.gap_previous!=self.gap)
-
-               
-               self.one_gap_detected_previous = self.one_gap_detected
-               self.one_gap_detected = torch.any(torch.tensor(self.measured_heights)[:,0:1]<0.0,dim=-1)
-    
-               self.gap_counter+=(self.one_gap_detected_previous!=self.one_gap_detected)
 
         self.first_iteartion = False
         self._post_physics_step_callback()
