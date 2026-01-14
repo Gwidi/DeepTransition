@@ -49,6 +49,7 @@ class CPG_RL():
           mu_low = 1.0,
           mu_up = 4.0,
           max_step_len = 0.03,
+          num_CPGs =4
         ):
         self._rl_task_string = rl_task_string
         #global device
@@ -79,6 +80,7 @@ class CPG_RL():
         self._ground_penetration = ground_penetration
         self._robot_height = robot_height 
         self._des_step_len = des_step_len
+        self.num_CPGs = num_CPGs
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
