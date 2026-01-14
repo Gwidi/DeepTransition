@@ -161,7 +161,8 @@ class CPG_RL():
         z = torch.where(torch.sin(self.X[:,1,:]) > 0, 
                         -self._robot_height + self._ground_clearance   * torch.sin(self.X[:,1,:]),
                         -self._robot_height + self._ground_penetration * torch.sin(self.X[:,1,:]))
-        return x, y, z
+        sp = 0.0
+        return x, y, z, sp
 
     def integrate_oscillator_equations(self):
         device = self._device 
@@ -177,7 +178,7 @@ class CPG_RL():
             d2X = (_a * ( _a/4 * (torch.sqrt(self._mu) - X[:,0,:]) - X_dot_prev[:,0,:] )).unsqueeze(1)
             if self._couple:
                 for i in range(4):
-                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)) - self.PHI[i,:] ) ,2 )
+                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI[i,:].unsqueeze(0) ) , 1)
             X_dot[:,1,:] = self._omega_residuals
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 
@@ -186,9 +187,9 @@ class CPG_RL():
             self.X[:,1,:] = torch.remainder(self.X[:,1,:], (2*np.pi))
 
     def compute_inverse_kinematics(self,robot,legID, x, y, z):
-        l1 = robot.hip_link_length_a1
-        l2 = robot.thigh_link_length_a1
-        l3 = robot.thigh_link_length_a1
+        l1 = robot.hip_link_length
+        l2 = robot.thigh_link_length
+        l3 = robot.thigh_link_length
     
         D = (y**2 + (-z)**2 - l1**2 +
         (-x)**2 - l2**2 - l3**2) / (
@@ -202,6 +203,8 @@ class CPG_RL():
           sideSign = -1
 
         knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
+        # if legID == 1 or legID == 3:
+        #     knee_angle *= -1 # reversed tf 
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
