@@ -61,6 +61,8 @@ class LeggedRobotCfg(BaseConfig):
 
 
     class commands:
+        curriculum = True
+        max_curriculum = 3.0
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
@@ -100,7 +102,7 @@ class LeggedRobotCfg(BaseConfig):
 
     class control:
         control_type = 'CPG_OFFSETX'
-        action_scale = 0.25
+        action_scale = 1.0
 
         decimation = 10
         stiffness = {'joint': 100.}  # [N*m/rad]
@@ -127,7 +129,7 @@ class LeggedRobotCfg(BaseConfig):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/go1/urdf/go1_updated.urdf'
         foot_name = "foot"
         penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base"]
+        terminate_after_contacts_on = ["base", "thigh"]
         self_collisions = 1 #
         hip_link_length = 0.08
         thigh_link_length = 0.213
@@ -176,7 +178,7 @@ class LeggedRobotCfg(BaseConfig):
             dof_vel = 0.05
             height_measurements = 5.0
         clip_observations = 100.
-        clip_actions = 100 #4 #100.
+        clip_actions = 1 #100.
 
     class noise:
         add_noise = False #True
@@ -192,8 +194,8 @@ class LeggedRobotCfg(BaseConfig):
     # viewer camera:
     class viewer:
         ref_env = 0
-        pos = [8, -6, 6]  # [m]
-        lookat = [8., 2, 1.]  # [m]
+        pos = [0, -2, 1]  # [m]
+        lookat = [0., 2, 1.]  # [m]
 
     class sim:
         dt = 0.001 #0.005
@@ -228,7 +230,7 @@ class LeggedRobotCfgPPO(BaseConfig):
         value_loss_coef = 1.0
         use_clipped_value_loss = True
         clip_param = 0.2
-        entropy_coef = 0.01
+        entropy_coef = 0.001
         num_learning_epochs = 5
         num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
         learning_rate = 1.e-3 
