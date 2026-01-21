@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 64
+        num_observations = 63
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -62,6 +62,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
 
     class commands:
+        curriculum = False
+        max_curriculum = 3.0
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
@@ -71,7 +73,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.3 , 3.0] # min max [m/s]
+            lin_vel_x = [ 0.3 , 1.2] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -104,7 +106,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class control:
         control_type = 'CPG'
-        action_scale = 0.25
+        action_scale = 1.0
 
         decimation = 10
         stiffness = {'j': 100}  # [N*m/rad]
@@ -132,7 +134,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         # Accordingly to the URDF file:
         foot_name = "foot" 
         penalize_contacts_on = ["l1", "l2"]
-        terminate_after_contacts_on = ["body"]
+        terminate_after_contacts_on = ["body", "l1"]
 
         self_collisions = 1 #
         hip_link_length = 0.0525 
@@ -146,9 +148,9 @@ class SBRigidSpineRobotCfg(BaseConfig):
         alpha_latency =0.43
         randomize_PD = False
         randomize_friction = True
-        friction_range = [0.2,1.5]
+        friction_range = [0.3,1.0]
         randomize_base_mass = True 
-        added_mass_range = [-1., 6.] 
+        added_mass_range = [0., 5.] 
         push_robots = False 
         push_interval_s = 1 
         max_push_vel_xy = 0.03 
@@ -157,17 +159,17 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class rewards:
         class scales:
-            tracking_lin_vel = 0.03  
-            penalty_lin_vel = -0.02
-            penalty_ang_vel = -0.001
+            tracking_lin_vel = 3.0  
+            penalty_lin_vel = -2.0
+            penalty_ang_vel = -0.1
             # orientation = -0.01
             # orientation_yaw = -0.01
-            energy = -0.00001
+            energy = -0.001
             #locomotion_distance = 800.7230
             #feet_contact_forces = -0.01
             
 
-        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
@@ -183,7 +185,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
             dof_vel = 0.05
             height_measurements = 5.0
         clip_observations = 100.
-        clip_actions = 100 #4 #100.
+        clip_actions = 1 #4 #100.
 
     class noise:
         add_noise = False #True
@@ -235,7 +237,7 @@ class SBRigidSpineRobotCfgPPO(BaseConfig):
         value_loss_coef = 1.0
         use_clipped_value_loss = True
         clip_param = 0.2
-        entropy_coef = 0.01
+        entropy_coef = 0.001
         num_learning_epochs = 5
         num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
         learning_rate = 1.e-3 

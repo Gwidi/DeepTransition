@@ -112,17 +112,17 @@ class QuadrupedWithSpine(BaseTask):
         self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         
-        if(self.cfg.env.play):
-            if(not(self.first_iteartion)):
-               self.gap_previous= self.gap
-               self.gap=torch.any(torch.tensor(self.measured_heights)[:,0:14]<0.0,dim=-1)
-               self.gap_course_counter+=(self.gap_previous!=self.gap)
+        # if(self.cfg.env.play):
+        #     if(not(self.first_iteartion)):
+        #        self.gap_previous= self.gap
+        #        self.gap=torch.any(torch.tensor(self.measured_heights)[:,0:14]<0.0,dim=-1)
+        #        self.gap_course_counter+=(self.gap_previous!=self.gap)
 
                
-               self.one_gap_detected_previous = self.one_gap_detected
-               self.one_gap_detected = torch.any(torch.tensor(self.measured_heights)[:,0:1]<0.0,dim=-1)
+        #        self.one_gap_detected_previous = self.one_gap_detected
+        #        self.one_gap_detected = torch.any(torch.tensor(self.measured_heights)[:,0:1]<0.0,dim=-1)
     
-               self.gap_counter+=(self.one_gap_detected_previous!=self.one_gap_detected)
+        #        self.gap_counter+=(self.one_gap_detected_previous!=self.one_gap_detected)
 
         self.first_iteartion = False
         self._post_physics_step_callback()
@@ -215,7 +215,7 @@ class QuadrupedWithSpine(BaseTask):
             self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+                                    self.commands[:, :1] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
@@ -896,11 +896,11 @@ class QuadrupedWithSpine(BaseTask):
         lin_vel_error = torch.square(self.commands[:, 0] - self.base_lin_vel[:, 0])
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
     
-    def _reward_penalty_lin_vel(self):
+    def _reward_linear_vel(self):
         # Penalize velocity in axes y,z 
         return torch.sum(torch.square(self.base_lin_vel[:, 1:3]), dim=1)
     
-    def _reward_penalty_ang_vel(self):
+    def _reward_angular_vel(self):
         # Penalize angular velocity in all axes
         return torch.sum(torch.square(self.base_ang_vel), dim=1)
     
