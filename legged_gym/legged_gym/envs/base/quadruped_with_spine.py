@@ -896,11 +896,11 @@ class QuadrupedWithSpine(BaseTask):
         lin_vel_error = torch.square(self.commands[:, 0] - self.base_lin_vel[:, 0])
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
     
-    def _reward_linear_vel(self):
+    def _reward_linear_velocity(self):
         # Penalize velocity in axes y,z 
         return torch.sum(torch.square(self.base_lin_vel[:, 1:3]), dim=1)
     
-    def _reward_angular_vel(self):
+    def _reward_angular_velocity(self):
         # Penalize angular velocity in all axes
         return torch.sum(torch.square(self.base_ang_vel), dim=1)
     
