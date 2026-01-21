@@ -160,8 +160,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
     class rewards:
         class scales:
             tracking_lin_vel = 3.0  
-            penalty_lin_vel = -2.0
-            penalty_ang_vel = -0.1
+            linear_velocity = -2.0
+            angular_velocity = -0.1
             # orientation = -0.01
             # orientation_yaw = -0.01
             energy = -0.001
