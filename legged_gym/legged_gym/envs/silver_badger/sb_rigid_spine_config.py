@@ -64,6 +64,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
     class commands:
         curriculum = False
         max_curriculum = 3.0
+        gait_resampling_time = 3.0
+        resample_gait_style = True
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]

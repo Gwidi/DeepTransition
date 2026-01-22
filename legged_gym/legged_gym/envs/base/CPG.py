@@ -36,7 +36,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="PRONK", # TROT or GALLOP
+          gait="TROT",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
@@ -77,6 +77,7 @@ class CPG_RL():
         self._coupling_strength = coupling_strength
         self._dt = time_step
         self._set_gait(gait)
+        self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
         self.X[:,1,:4] = self.PHI[0,:] #* 0.0
@@ -172,6 +173,18 @@ class CPG_RL():
         canter = 2 * np.pi * canter
         transverse_gallop = 2 *np.pi * transverse_gallop
         rotary_gallop = 2 *np.pi * rotary_gallop
+
+        self.available_gaits = [
+            trot,
+            walk,
+            pace,
+            bound,
+            pronk,
+            canter,
+            transverse_gallop,
+            rotary_gallop,
+            amble
+        ]
 
 
         self.PHI_trot = trot
@@ -295,7 +308,7 @@ class CPG_RL():
             d2X = (_a * ( _a/4 * (torch.sqrt(self._mu) - X[:,0,:]) - X_dot_prev[:,0,:] )).unsqueeze(1)
             if self._couple:
                 for i in range(4):
-                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI[i,:].unsqueeze(0) ) , 1)
+                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI_batch[:,i,:]) , 1)
             X_dot[:,1,:] = self._omega_residuals
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 
@@ -329,3 +342,17 @@ class CPG_RL():
             l2 + l3 * torch.cos(knee_angle)) 
         output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)  
         return output
+    
+    def random_resample_gaits(self, env_ids):
+        """ Randomly resample gaits for the specified environments."""
+        if len(env_ids) == 0:
+            return
+            
+        # Available gaits 
+        available = torch.stack(self.available_gaits) 
+        
+        # Randomly select new gait indices
+        random_indices = torch.randint(0, len(self.available_gaits), (len(env_ids),), device=self._device)
+        
+        # Assign new matrices to the batch
+        self.PHI_batch[env_ids] = available[random_indices]

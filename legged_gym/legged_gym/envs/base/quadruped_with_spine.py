@@ -365,6 +365,17 @@ class QuadrupedWithSpine(BaseTask):
             self.measured_heights = self._get_heights()
         if self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._push_robots()
+        
+        if self.cfg.commands.resample_gait_style:
+            # Resample gaits every n seconds
+            resample_interval_steps = int(self.cfg.commands.gait_resampling_time / self.dt)
+            
+            # Check which envs need to resample gaits
+            env_ids_to_switch_gait = (self.episode_length_buf % resample_interval_steps == 0).nonzero(as_tuple=False).flatten()
+            
+            if len(env_ids_to_switch_gait) > 0:
+                # Call the method in CPG that replaces the PHI_batch matrices
+                self._cpg.random_resample_gaits(env_ids_to_switch_gait)
 
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
