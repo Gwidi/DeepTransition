@@ -61,7 +61,7 @@ class LeggedRobotCfg(BaseConfig):
 
 
     class commands:
-        curriculum = True
+        curriculum = False
         max_curriculum = 3.0
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
@@ -71,7 +71,7 @@ class LeggedRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.3 , 3.0] # min max [m/s]
+            lin_vel_x = [ 0.3 , 1.2] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -101,7 +101,7 @@ class LeggedRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX'
+        control_type = 'CPG'
         action_scale = 1.0
 
         decimation = 10
@@ -145,7 +145,7 @@ class LeggedRobotCfg(BaseConfig):
         friction_range = [0.3,1.0]
         randomize_base_mass = True 
         added_mass_range = [0., 5.] 
-        push_robots = True 
+        push_robots = False 
         push_interval_s = 15
         max_push_vel_xy = 0.05 
         lag_timesteps = 6
@@ -153,16 +153,16 @@ class LeggedRobotCfg(BaseConfig):
 
     class rewards:
         class scales:
-            tracking_lin_vel = 0.03
-            linear_velocity = -0.02
-            angular_velocity = -0.001
+            tracking_lin_vel = 3.0
+            linear_velocity = -2.0
+            angular_velocity = -0.1
             # orientation = -20.
             # orientation_yaw = -30.003 
-            energy = -0.00001 
+            energy = -0.001 
             # locomotion_distance = 800.7230
             # feet_contact_forces = -0.01
 
-        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = 1.
         soft_torque_limit = 1.
@@ -243,10 +243,10 @@ class LeggedRobotCfgPPO(BaseConfig):
     class runner:
         policy_class_name = 'ActorCritic'
         algorithm_class_name = 'PPO'
-        num_steps_per_env = 24#64 # per iteration
+        num_steps_per_env = 24 # per iteration
         max_iterations = 1500 # number of policy updates
         # logging
-        save_interval = 50 # check for potential saves every this many iterations
+        save_interval = 1000 # check for potential saves every this many iterations
         experiment_name = 'quadruped' 
         run_name = ''
         # load and resume
