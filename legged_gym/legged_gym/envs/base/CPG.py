@@ -36,20 +36,20 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="TROT", # TROT or GALLOP
+          gait="PRONK", # TROT or GALLOP
           couple=True,
           coupling_strength=10,
           time_step=0.001,
           robot_height=0.3, 
-          des_step_len=0.03,
-          ground_clearance=0.07,
+          des_step_len=0.05,
+          ground_clearance=0.02,
           ground_penetration=0.01,
           num_envs=1,
           device=None,
           rl_task_string=None,
           mu_low = 1.0,
           mu_up = 2.0,
-          max_step_len = 0.03,
+          max_step_len = 0.2,
           num_CPGs = 4,
         ):
         self._rl_task_string = rl_task_string
@@ -79,7 +79,7 @@ class CPG_RL():
         self._set_gait(gait)
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
-        self.X[:,1,:4] = self.PHI[0,:] * 0.0
+        self.X[:,1,:4] = self.PHI[0,:] #* 0.0
         if "SPINE" in rl_task_string:
             self.X[:,1,4] = 0.0 # spine initial phase
 
@@ -93,7 +93,7 @@ class CPG_RL():
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
         self.X[env_ids,0,:] = torch.rand(len(env_ids),self.num_CPGs,device=self._device) * .1
-        self.X[env_ids,1,:4] = self.PHI[0,:] #*0.0
+        self.X[env_ids,1,:4] = self.PHI[0,:] *0.0
         if "SPINE" in self._rl_task_string:
             self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
@@ -112,28 +112,105 @@ class CPG_RL():
  
 
     def _set_gait(self,gait):
-        device = self._device 
+        device = self._device
+        
+        walk = torch.tensor([[ 0, -0.5, -0.75, -0.25 ], # FL, FR, RL, RR
+                            [0.5, 0, -0.25, 0.25 ],
+                            [0.75, 0.25, 0, 0.5 ],
+                            [ 0.25, -0.25, -0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
 
-        trot = torch.tensor([[ 0, 0.5, 0.5, 0 ], # FL, FR, RL, RR
-                            [-0.5, 0, 0,-0.5 ],
-                            [-0.5, 0, 0,-0.5 ],
-                            [ 0, 0.5, 0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+        trot = torch.tensor([[ 0, -0.5, -0.5, 0 ], # FL, FR, RL, RR
+                            [0.5, 0, 0, 0.5 ],
+                            [0.5, 0, 0, 0.5 ],
+                            [ 0, -0.5, -0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
 
-        gallop = torch.tensor([[ 1, 1, 0, 0 ],
-                                [0, 0, -1,-1 ],
-                                [0, 0, -1,-1 ],
-                                [ 1, 1, 0, 0 ]],dtype=torch.float, device=device, requires_grad=False)
-        gallop = np.pi * gallop
-        trot = np.pi * trot
+        amble = torch.tensor([[ 0.0, -0.5, -0.8, -0.3 ],  # FL, FR, RL, RR
+                            [ 0.5,  0.0, -0.3,  0.2 ],
+                            [ 0.8,  0.3,  0.0,  0.5 ],
+                            [ 0.3, -0.2, -0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        pace = torch.tensor([[ 0.0, -0.5,  0.0, -0.5 ],  # FL, FR, RL, RR
+                            [ 0.5,  0.0,  0.5,  0.0 ],
+                            [ 0.0, -0.5,  0.0, -0.5 ],
+                            [ 0.5,  0.0,  0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        # bound: A=0, B=0.5, C=0.5
+        bound = torch.tensor([[ 0.0,  0.0, -0.5, -0.5 ],  # FL, FR, RL, RR
+                            [ 0.0,  0.0,  0.0, -0.5 ],
+                            [ 0.5,  0.0,  0.0,  0.5 ],
+                            [ 0.5,  0.5, -0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        # pronk: A=0, B=0, C=0
+        pronk = torch.tensor([[ 0.0,  0.0,  0.0,  0.0 ],  # FL, FR, RL, RR
+                            [ 0.0,  0.0,  0.0,  0.0 ],
+                            [ 0.0,  0.0,  0.0,  0.0 ],
+                            [ 0.0,  0.0,  0.0,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        # canter: A=0.7, B=0.3, C=0
+        canter = torch.tensor([[ 0.0, -0.7, -0.3,  0.0 ],  # FL, FR, RL, RR
+                            [ 0.7,  0.0,  0.4, -0.7 ],
+                            [ 0.3, -0.4,  0.0, -0.3 ],
+                            [ 0.0,  0.7,  0.3,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        # transverse_gallop: A=-0.1, B=-0.5, C=-0.6
+        transverse_gallop = torch.tensor([[ 0.0,  0.1,  0.5,  0.6 ],   # FL, FR, RL, RR
+                            [-0.1,  0.0, -0.4, -0.5 ],
+                            [-0.5,  0.4,  0.0, -0.1 ],
+                            [-0.6,  0.5,  0.1,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+
+        # rotary_gallop: A=0.1, B=-0.4, C=-0.5
+        rotary_gallop = torch.tensor([[ 0.0, -0.1,  0.4,  0.5 ],   # FL, FR, RL, RR
+                            [ 0.1,  0.0,  0.5,  0.6 ],
+                            [-0.4, -0.5,  0.0,  0.1 ],
+                            [-0.5, -0.6, -0.1,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
+        trot = 2 * np.pi * trot
+        walk = 2 * np.pi * walk
+        amble = 2 * np.pi * amble
+        pace = 2 * np.pi * pace
+        bound = 2 * np.pi * bound
+        pronk = 2 * np.pi * pronk
+        canter = 2 * np.pi * canter
+        transverse_gallop = 2 *np.pi * transverse_gallop
+        rotary_gallop = 2 *np.pi * rotary_gallop
+
+
         self.PHI_trot = trot
-        self.PHI_gallop = gallop
+        self.PHI_walk = walk
+        self.PHI_pace = pace
+        self.PHI_bound = bound
+        self.PHI_pronk = pronk
+        self.PHI_canter = canter
+        self.PHI_rotary_gallop = rotary_gallop
+        self.PHI_transverse_gallop = transverse_gallop
+        self.PHI_amble = amble
 
         if gait == "TROT":
             print('TROT')
             self.PHI = self.PHI_trot
-        elif gait == "GALLOP":
-            print('GALLOP')
-            self.PHI = self.PHI_gallop
+        elif gait == "ROTARY_GALLOP":
+            print('ROTARY_GALLOP')
+            self.PHI = self.PHI_rotary_gallop
+        elif gait == "TRANSVERSE_GALLOP":
+            print('TRANSVERSE_GALLOP')
+            self.PHI = self.PHI_transverse_gallop
+        elif gait == "WALK":
+            print('WALK')
+            self.PHI = self.PHI_walk
+        elif gait == "AMBLE":
+            self.PHI = self.PHI_amble
+            print('AMBLE')
+        elif gait == "PACE":
+            self.PHI = self.PHI_pace
+            print('PACE')
+        elif gait == "BOUND":
+            self.PHI = self.PHI_bound
+            print('BOUND')
+        elif gait == "PRONK":
+            self.PHI = self.PHI_pronk
+            print('PRONK')
+        elif gait == "CANTER":
+            self.PHI = self.PHI_canter
+            print('CANTER')
         else:
             raise ValueError( gait + 'not implemented.')
 
@@ -170,12 +247,12 @@ class CPG_RL():
         MAX_SPINE_ANGLE = torch.tensor(5.0 * np.pi / 180) # 15° in radians
   
         device = self._device 
-        a = torch.clip(actions, -1, 1)
+        a = actions
         if "SPINE" in self._rl_task_string:
-            self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2) 
+            self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high)
         else:
-            self._mu = self._scale_helper(a[:,:4],MU_LOW**2,MU_UPP**2) 
+            self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high)
         
 
@@ -202,7 +279,7 @@ class CPG_RL():
         else: 
             sp = 0.0
     
-        return x, y, z
+        return x, y, z, sp
 
     def integrate_oscillator_equations(self):
         device = self._device 
@@ -242,8 +319,8 @@ class CPG_RL():
             sideSign = -1
 
         knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
-        # if legID == 1 or legID == 3:
-        #     knee_angle *= -1 # reversed tf 
+        if legID == 1 or legID == 3:
+            knee_angle *= -1 # reversed tf 
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
