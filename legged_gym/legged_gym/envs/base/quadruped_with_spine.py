@@ -212,14 +212,13 @@ class QuadrupedWithSpine(BaseTask):
         """
         #print(self.max_vel.unsqueeze(1).size(), self.actions.size())
         if "CPG" in self.cfg.control.control_type:
-            self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.base_ang_vel  * self.obs_scales.ang_vel,
+            self.obs_buf = torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :1] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
-                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    #self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
@@ -228,7 +227,7 @@ class QuadrupedWithSpine(BaseTask):
             self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+                                    self.commands[:, :1] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
@@ -574,7 +573,7 @@ class QuadrupedWithSpine(BaseTask):
 
         self.frequency_high = torch.zeros(self.num_envs,self.cfg.asset.num_CPGs, dtype=torch.float, device=self.device, requires_grad=False)             
         self.frequency_low = torch.zeros(self.num_envs,self.cfg.asset.num_CPGs, dtype=torch.float, device=self.device, requires_grad=False) 
-        self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this
+        self.commands_scale = 2.0
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False)
         self.last_contacts = torch.zeros(self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])

@@ -26,8 +26,8 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 64
-        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_observations = 55
+        num_privileged_obs = 62 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
@@ -65,7 +65,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         curriculum = False
         max_curriculum = 3.0
         gait_resampling_time = 3.0
-        resample_gait_style = True
+        resample_gait_style = False
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
@@ -107,12 +107,12 @@ class SBRigidSpineRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX'
+        control_type = 'CPG'
         action_scale = 1.0
 
-        decimation = 10
-        stiffness = {'j': 100}  # [N*m/rad]
-        damping = {'j': 2.0}     # [N*m*s/rad]
+        decimation = 4
+        stiffness = {'j': 50}  # [N*m/rad]
+        damping = {'j': 0.5}     # [N*m*s/rad]
 
 
 
@@ -153,9 +153,9 @@ class SBRigidSpineRobotCfg(BaseConfig):
         friction_range = [0.3,1.0]
         randomize_base_mass = True 
         added_mass_range = [0., 5.] 
-        push_robots = False 
-        push_interval_s = 1 
-        max_push_vel_xy = 0.03 
+        push_robots = True 
+        push_interval_s = 15 
+        max_push_vel_xy = 0.05 
         lag_timesteps = 6
         randomize_lag_timesteps = False
 
@@ -207,7 +207,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         lookat = [8., 2, 1.]  # [m]
 
     class sim:
-        dt = 0.001 #0.005
+        dt = 0.005 #0.005
         substeps = 1
         gravity = [0., 0. ,-9.81]  # [m/s^2]
         up_axis = 1  # 0 is y, 1 is z
