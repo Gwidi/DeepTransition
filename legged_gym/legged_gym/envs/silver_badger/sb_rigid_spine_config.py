@@ -139,9 +139,9 @@ class SBRigidSpineRobotCfg(BaseConfig):
         terminate_after_contacts_on = ["body", "l1"]
 
         self_collisions = 1 #
-        hip_link_length = 0.0525 
-        thigh_link_length = 0.18
-        calf_link_length = 0.177
+        hip_link_length = 0.0555 
+        thigh_link_length = 0.2
+        calf_link_length = 0.2
         spine_locked = True
         num_CPGs = 4
 
