@@ -40,9 +40,9 @@ class CPG_RL():
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.3, 
+          robot_height=0.41, 
           des_step_len=0.05,
-          ground_clearance=0.02,
+          ground_clearance=0.07,
           ground_penetration=0.01,
           num_envs=1,
           device=None,
@@ -98,7 +98,7 @@ class CPG_RL():
         if "SPINE" in self._rl_task_string:
             self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
-        self._resample_parameters(env_ids)
+        # self._resample_parameters(env_ids)
 
     def _resample_parameters(self, env_ids):
         """ Resample parameters h, xoff, gc, and gp  used by the CPG controller for some environments
@@ -339,8 +339,20 @@ class CPG_RL():
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
         hip_thigh_angle = torch.atan2(-x, torch.sqrt(sqrt_component)) -1* torch.atan2(
             l3 * torch.sin(knee_angle),
-            l2 + l3 * torch.cos(knee_angle)) 
-        output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)  
+            l2 + l3 * torch.cos(knee_angle))
+
+        HIP_OFFSET = 0.8
+        KNEE_OFFSET = 1.5
+
+        if legID == 0 or legID == 2:
+            hip_thigh_angle = hip_thigh_angle + HIP_OFFSET
+            knee_angle = knee_angle - KNEE_OFFSET
+        else:
+            hip_thigh_angle = hip_thigh_angle - HIP_OFFSET
+            knee_angle = knee_angle + KNEE_OFFSET
+
+        output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)
+
         return output
     
     def random_resample_gaits(self, env_ids):
