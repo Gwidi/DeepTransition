@@ -40,9 +40,9 @@ class CPG_RL():
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.3, 
+          robot_height=0.29, 
           des_step_len=0.05,
-          ground_clearance=0.02,
+          ground_clearance=0.07,
           ground_penetration=0.01,
           num_envs=1,
           device=None,
@@ -98,7 +98,7 @@ class CPG_RL():
         if "SPINE" in self._rl_task_string:
             self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
-        self._resample_parameters(env_ids)
+        # self._resample_parameters(env_ids)
 
     def _resample_parameters(self, env_ids):
         """ Resample parameters h, xoff, gc, and gp  used by the CPG controller for some environments
@@ -316,10 +316,50 @@ class CPG_RL():
             self.d2X = d2X 
             self.X[:,1,:] = torch.remainder(self.X[:,1,:], (2*np.pi))
 
+    # def compute_inverse_kinematics(self,robot,legID, x, y, z):
+    #     z = -0.35
+    #     z = torch.as_tensor(z, device=self._device, dtype=torch.float)
+    #     x = 0.0
+    #     x = torch.as_tensor(x, device=self._device, dtype=torch.float)
+
+    #     l1 = robot.hip_link_length
+    #     l2 = robot.thigh_link_length
+    #     l3 = robot.calf_link_length
+
+    #     D = (y**2 + (-z)**2 - l1**2 +
+    #     (-x)**2 - l2**2 - l3**2) / (
+    #              2 * l3 * l2)
+    #     D = torch.clip(D, -1.0, 1.0)
+
+    #     # check Right vs Left leg for hip angle
+    #     sideSign = 1
+    #     if legID == 0 or legID == 2:
+    #         sideSign = -1
+
+    #     knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
+    #     if legID == 1 or legID == 3:
+    #         knee_angle *= -1 # reversed tf 
+    #     sqrt_component = y**2 + (-z)**2 - l1**2
+    #     hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
+    #         torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
+    #     hip_thigh_angle = torch.atan2(-x, torch.sqrt(sqrt_component)) -1* torch.atan2(
+    #         l3 * torch.sin(knee_angle),
+    #         l2 + l3 * torch.cos(knee_angle))
+
+
+    #     output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)
+
+    #     return output
+    
     def compute_inverse_kinematics(self,robot,legID, x, y, z):
         l1 = robot.hip_link_length
         l2 = robot.thigh_link_length
         l3 = robot.calf_link_length
+
+        dist_sq_yz = y**2 + z**2
+        sqrt_component = dist_sq_yz - l1**2
+        sqrt_component = torch.clip(sqrt_component, min=0.0)
+        dist_yz = torch.sqrt(sqrt_component)
 
         D = (y**2 + (-z)**2 - l1**2 +
         (-x)**2 - l2**2 - l3**2) / (
@@ -331,17 +371,34 @@ class CPG_RL():
         if legID == 0 or legID == 2:
             sideSign = -1
 
-        knee_angle = torch.atan2(-torch.sqrt(1 - D**2), D)
+        knee_angle = torch.acos(D) - 3.14159
+
+
         if legID == 1 or legID == 3:
             knee_angle *= -1 # reversed tf 
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
-        hip_thigh_angle = torch.atan2(-x, torch.sqrt(sqrt_component)) -1* torch.atan2(
-            l3 * torch.sin(knee_angle),
-            l2 + l3 * torch.cos(knee_angle)) 
-        output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)  
+        
+        # 5. HIP THIGH (Pitch)
+        # Alpha angle: inclination resulting from x and vertical distance
+        alpha = torch.atan2(-x, dist_yz)
+        # Beta angle: correction resulting from thigh and shin triangle
+        # We use acos because standard atan2 with your knee definition fails
+        cos_beta = (l2**2 + (x**2 + dist_yz**2) - l3**2) / (2 * l2 * torch.sqrt(x**2 + dist_yz**2))
+        cos_beta = torch.clip(cos_beta, -1.0, 1.0)
+        beta = torch.acos(cos_beta)
+        
+        if legID == 1 or legID == 3:
+            hip_thigh_angle = alpha - beta
+        else: 
+            hip_thigh_angle = alpha + beta
+
+
+        output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)
+
         return output
+    
     
     def random_resample_gaits(self, env_ids):
         """ Randomly resample gaits for the specified environments."""
