@@ -379,6 +379,7 @@ class CPG_RL():
         sqrt_component = y**2 + (-z)**2 - l1**2
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
+
         
         # 5. HIP THIGH (Pitch)
         # Alpha angle: inclination resulting from x and vertical distance
