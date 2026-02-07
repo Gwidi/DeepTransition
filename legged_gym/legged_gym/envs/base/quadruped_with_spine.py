@@ -184,8 +184,11 @@ class QuadrupedWithSpine(BaseTask):
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
         if self.cfg.domain_rand.randomize_lag_timesteps:
+            self.current_lag[env_ids] = torch.randint(0, self.cfg.domain_rand.lag_timesteps + 1, (len(env_ids),), device=self.device)
             for i in range(len(self.lag_buffer)):
                 self.lag_buffer[i][env_ids, :] = 0
+
+        self.torques_prev[env_ids] = 0.
     
     def compute_reward(self):
         """ Compute rewards
@@ -212,11 +215,11 @@ class QuadrupedWithSpine(BaseTask):
         """
         #print(self.max_vel.unsqueeze(1).size(), self.actions.size())
         if "CPG" in self.cfg.control.control_type:
-            self.obs_buf = torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    self.projected_gravity,
+            self.obs_buf = torch.cat(( #self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    #self.projected_gravity,
                                     self.commands[:, :1] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    #self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
                                     #self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
@@ -237,6 +240,16 @@ class QuadrupedWithSpine(BaseTask):
                                     self._cpg.X_dot[:,0,:] * 1/30, 
                                     (self._cpg.X_dot[:,1,:] - 15) * 1/30,
                                     ),dim=-1)
+            
+        self.lag_buffer.pop(-1)
+        self.lag_buffer.insert(0, self.obs_buf.clone())
+
+        if self.cfg.domain_rand.randomize_lag_timesteps:
+            for i in range(self.num_envs):
+                lag_idx = self.current_lag[i]
+                self.obs_buf[i, :] = self.lag_buffer[lag_idx][i, :]
+        else:
+            self.obs_buf[:] = self.lag_buffer[-1][:]
 
 
         if self.cfg.terrain.measure_heights:
@@ -446,7 +459,14 @@ class QuadrupedWithSpine(BaseTask):
             #     des_joint_pos[:, hip_roll_indices[leg_idx]] += hip_roll_offset[leg_idx]
 
             self.dof_des_pos = des_joint_pos
-            torques = self.p_gains*(self.dof_des_pos - self.dof_pos) - self.d_gains*self.dof_vel 
+            torques = self.p_gains*(self.dof_des_pos - self.dof_pos) - self.d_gains*self.dof_vel
+            
+            # Implementacja Twojego parametru latency:
+        if self.cfg.domain_rand.latency:
+            alpha = self.cfg.domain_rand.alpha_latency
+            torques = alpha * self.torques_prev + (1.0 - alpha) * torques
+            self.torques_prev[:] = torques
+             
         else:
             raise NameError(f"Unknown controller type: {control_type}")
         
@@ -614,6 +634,10 @@ class QuadrupedWithSpine(BaseTask):
                 if self.cfg.control.control_type in ["P", "V"]:
                     print(f"PD gain of joint {name} were not defined, setting them to zero")
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
+        self.lag_buffer = []
+        for _ in range(self.cfg.domain_rand.lag_timesteps + 1):
+            self.lag_buffer.append(torch.zeros(self.num_envs, self.num_observations, dtype=torch.float, device=self.device))
+        self.current_lag = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
 
 
 
