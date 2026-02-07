@@ -636,7 +636,7 @@ class QuadrupedWithSpine(BaseTask):
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
         self.lag_buffer = []
         for _ in range(self.cfg.domain_rand.lag_timesteps + 1):
-            self.lag_buffer.append(torch.zeros(self.num_envs, self.num_observations, dtype=torch.float, device=self.device))
+            self.lag_buffer.append(torch.zeros(self.num_envs, self.num_obs, dtype=torch.float, device=self.device))
         self.current_lag = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
 
 
