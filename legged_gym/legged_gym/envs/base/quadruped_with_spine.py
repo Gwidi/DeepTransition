@@ -187,8 +187,8 @@ class QuadrupedWithSpine(BaseTask):
             self.current_lag[env_ids] = torch.randint(0, self.cfg.domain_rand.lag_timesteps + 1, (len(env_ids),), device=self.device)
             for i in range(len(self.lag_buffer)):
                 self.lag_buffer[i][env_ids, :] = 0
-
-        self.torques_prev[env_ids] = 0.
+        if self.cfg.domain_rand.latency:
+            self.torques_prev[env_ids] = 0.
     
     def compute_reward(self):
         """ Compute rewards
@@ -241,15 +241,14 @@ class QuadrupedWithSpine(BaseTask):
                                     (self._cpg.X_dot[:,1,:] - 15) * 1/30,
                                     ),dim=-1)
             
-        self.lag_buffer.pop(-1)
-        self.lag_buffer.insert(0, self.obs_buf.clone())
-
         if self.cfg.domain_rand.randomize_lag_timesteps:
+            self.lag_buffer.pop(-1)
+            self.lag_buffer.insert(0, self.obs_buf.clone())
+
+        
             for i in range(self.num_envs):
                 lag_idx = self.current_lag[i]
                 self.obs_buf[i, :] = self.lag_buffer[lag_idx][i, :]
-        else:
-            self.obs_buf[:] = self.lag_buffer[-1][:]
 
 
         if self.cfg.terrain.measure_heights:
@@ -461,11 +460,10 @@ class QuadrupedWithSpine(BaseTask):
             self.dof_des_pos = des_joint_pos
             torques = self.p_gains*(self.dof_des_pos - self.dof_pos) - self.d_gains*self.dof_vel
             
-            # Implementacja Twojego parametru latency:
-        if self.cfg.domain_rand.latency:
-            alpha = self.cfg.domain_rand.alpha_latency
-            torques = alpha * self.torques_prev + (1.0 - alpha) * torques
-            self.torques_prev[:] = torques
+            if self.cfg.domain_rand.latency:
+                alpha = self.cfg.domain_rand.alpha_latency
+                torques = alpha * self.torques_prev + (1.0 - alpha) * torques
+                self.torques_prev[:] = torques
              
         else:
             raise NameError(f"Unknown controller type: {control_type}")
