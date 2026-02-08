@@ -66,12 +66,12 @@
       </geometry>
     </collision>
   </link>
-  <joint name="sp_j0" type="fixed" dont_collapse="true">
+  <joint name="sp_j0" type="revolute">
     <parent link="body"/>
     <child link="rear"/>
     <origin rpy="3.14159 0 4.71" xyz="-0.141 -0.0395 0"/>
     <axis xyz="1 0 0"/>
-    <limit effort="48.0" lower="-0.785" upper="0.785" velocity="3.15"/>
+    <limit effort="48.0" lower="-0.001" upper="0.001" velocity="3.15"/>
   </joint>
   <joint name="root" type="fixed">
     <parent link="base_link"/>

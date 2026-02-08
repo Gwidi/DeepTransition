@@ -214,6 +214,9 @@ class QuadrupedWithSpine(BaseTask):
         """ Computes observations
         """
         #print(self.max_vel.unsqueeze(1).size(), self.actions.size())
+
+        self.dof_pos[:, 6] = self.dof_vel[:, 6] = 0.0
+
         if "CPG" in self.cfg.control.control_type:
             self.obs_buf = torch.cat(( #self.base_ang_vel  * self.obs_scales.ang_vel,
                                     #self.projected_gravity,
@@ -428,29 +431,29 @@ class QuadrupedWithSpine(BaseTask):
 
             foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length
             LEG_INDICES = np.array([1,0,3,2])
-            if "SPINE" in control_type:
-                des_joint_pos[:, 6] = sp  # spine pitch
-                for ig_idx,i in enumerate(LEG_INDICES):
-                    x = xs[:,i]
-                    z = zs[:,i]
-                    y = sideSign[i] * foot_y  + ys[:,i]
-                    robot_length=self.cfg.asset
-                    if ig_idx == 0:    # FL 
-                        start_idx = 0  # index 0, 1, 2
-                    elif ig_idx == 1:  # FR 
-                        start_idx = 3  # index 3, 4, 5
-                    elif ig_idx == 2:  # RL  (after spine)
-                        start_idx = 7  # index 7, 8, 9
-                    elif ig_idx == 3:  # RR 
-                        start_idx = 10  # index 10, 11, 12
-                    des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
-            else:
-                for ig_idx,i in enumerate(LEG_INDICES):
-                    x = xs[:,i]
-                    z = zs[:,i]
-                    y = sideSign[i] * foot_y  + ys[:,i]
-                    robot_length=self.cfg.asset
-                    des_joint_pos[:, 3*ig_idx:3*ig_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
+
+            des_joint_pos[:, 6] = sp  # spine pitch
+            for ig_idx,i in enumerate(LEG_INDICES):
+                x = xs[:,i]
+                z = zs[:,i]
+                y = sideSign[i] * foot_y  + ys[:,i]
+                robot_length=self.cfg.asset
+                if ig_idx == 0:    # FL 
+                    start_idx = 0  # index 0, 1, 2
+                elif ig_idx == 1:  # FR 
+                    start_idx = 3  # index 3, 4, 5
+                elif ig_idx == 2:  # RL  (after spine)
+                    start_idx = 7  # index 7, 8, 9
+                elif ig_idx == 3:  # RR 
+                    start_idx = 10  # index 10, 11, 12
+                des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
+            # else:
+            #     for ig_idx,i in enumerate(LEG_INDICES):
+            #         x = xs[:,i]
+            #         z = zs[:,i]
+            #         y = sideSign[i] * foot_y  + ys[:,i]
+            #         robot_length=self.cfg.asset
+            #         des_joint_pos[:, 3*ig_idx:3*ig_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
             
             hip_roll_indices = [0, 3, 7, 10]  # FL, FR, RL, RR hip_roll
             hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR

@@ -26,8 +26,8 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 55
-        num_privileged_obs = 62 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_observations = 38
+        num_privileged_obs = 64 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
@@ -75,7 +75,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.3 , 1.2] # min max [m/s]
+            lin_vel_x = [ 0.15 , 1.5] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -129,8 +129,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
         linear_damping = 0.
         max_angular_velocity = 1000.
         max_linear_velocity = 1000.
-        armature = 0.
-        thickness = 0.01
+        armature = 0.013122
+        thickness = 0.002
 
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/silver_badger/urdf/intention.urdf'
         # Accordingly to the URDF file:
@@ -146,7 +146,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         num_CPGs = 4
 
     class domain_rand:
-        latency =False
+        latency = False
         alpha_latency =0.43
         randomize_PD = False
         randomize_friction = True
