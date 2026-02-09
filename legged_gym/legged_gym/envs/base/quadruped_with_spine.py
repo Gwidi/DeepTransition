@@ -224,7 +224,7 @@ class QuadrupedWithSpine(BaseTask):
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
-                                    #self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
@@ -623,17 +623,45 @@ class QuadrupedWithSpine(BaseTask):
             name = self.dof_names[i]
             angle = self.cfg.init_state.default_joint_angles[name]
             self.default_dof_pos[i] = angle
-            found = False
-            for dof_name in self.cfg.control.stiffness.keys():
-                if dof_name in name:
-                    self.p_gains[i] = self.cfg.control.stiffness[dof_name] #+ torch_rand_float(-30.0, 30.0, (len(env_ids), self.num_dof), device=self.device)
-                    self.d_gains[i] = self.cfg.control.damping[dof_name]
-                    found = True
-            if not found:
-                self.p_gains[i] = 0.
-                self.d_gains[i] = 0.
-                if self.cfg.control.control_type in ["P", "V"]:
-                    print(f"PD gain of joint {name} were not defined, setting them to zero")
+        
+
+         # PD randomization
+        if self.cfg.domain_rand.randomize_PD:
+            # Randomize PD gains for each environment and each DOF independently (can be used to randomize the gains of the spine joints differently from the legs joints for example)
+            # Kp: [30, 100]
+            self.p_gains = torch_rand_float(
+                self.cfg.domain_rand.stiffness_range[0], 
+                self.cfg.domain_rand.stiffness_range[1], 
+                (self.num_envs, self.num_dofs), 
+                device=self.device
+            )
+            # Kd: [0.5, 2.0]
+            self.d_gains = torch_rand_float(
+                self.cfg.domain_rand.damping_range[0], 
+                self.cfg.domain_rand.damping_range[1], 
+                (self.num_envs, self.num_dofs), 
+                device=self.device
+            )
+        else:
+            # Set PD gains based on the cfg values 
+            p_gains_vec = torch.zeros(self.num_dofs, device=self.device)
+            d_gains_vec = torch.zeros(self.num_dofs, device=self.device)
+            for i in range(self.num_dofs):
+                name = self.dof_names[i]
+                found = False
+                for dof_name in self.cfg.control.stiffness.keys():
+                    if dof_name in name:
+                        p_gains_vec[i] = self.cfg.control.stiffness[dof_name]
+                        d_gains_vec[i] = self.cfg.control.damping[dof_name]
+                        found = True
+                if not found:
+                    p_gains_vec[i] = 0.
+                    d_gains_vec[i] = 0.
+
+            # Powielamy wartości dla wszystkich środowisk
+            self.p_gains = p_gains_vec.repeat(self.num_envs, 1)
+            self.d_gains = d_gains_vec.repeat(self.num_envs, 1)
+
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
         self.lag_buffer = []
         for _ in range(self.cfg.domain_rand.lag_timesteps + 1):
@@ -731,7 +759,7 @@ class QuadrupedWithSpine(BaseTask):
         asset_options.replace_cylinder_with_capsule = self.cfg.asset.replace_cylinder_with_capsule
         asset_options.flip_visual_attachments = self.cfg.asset.flip_visual_attachments
         asset_options.fix_base_link = self.cfg.asset.fix_base_link
-        asset_options.density = self.cfg.asset.density
+        #asset_options.density = self.cfg.asset.density
         asset_options.angular_damping = self.cfg.asset.angular_damping
         asset_options.linear_damping = self.cfg.asset.linear_damping
         asset_options.max_angular_velocity = self.cfg.asset.max_angular_velocity
