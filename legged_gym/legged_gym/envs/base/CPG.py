@@ -40,7 +40,7 @@ class CPG_RL():
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.29, 
+          robot_height=0.32, 
           des_step_len=0.05,
           ground_clearance=0.07,
           ground_penetration=0.01,
@@ -306,10 +306,12 @@ class CPG_RL():
             X = self.X.clone()
 
             d2X = (_a * ( _a/4 * (torch.sqrt(self._mu) - X[:,0,:]) - X_dot_prev[:,0,:] )).unsqueeze(1)
+
+            coupling_effect = torch.zeros_like(self._omega_residuals)
             if self._couple:
                 for i in range(4):
-                    self._omega_residuals[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI_batch[:,i,:]) , 1)
-            X_dot[:,1,:] = self._omega_residuals
+                    coupling_effect[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI_batch[:,i,:]) , 1)
+            X_dot[:,1,:] = self._omega_residuals + coupling_effect
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 
             self.X_dot = X_dot
