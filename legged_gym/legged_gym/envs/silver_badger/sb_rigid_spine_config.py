@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 61
+        num_observations = 57
         num_privileged_obs = 64 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -107,12 +107,12 @@ class SBRigidSpineRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG'
+        control_type = 'CPG_OFFSETX'
         action_scale = 1.0
 
-        decimation = 4
-        stiffness = {'j': 50}  # [N*m/rad]
-        damping = {'j': 0.5}     # [N*m*s/rad]
+        decimation = 10
+        stiffness = {'j': 100}  # [N*m/rad]
+        damping = {'j': 2.0}     # [N*m*s/rad]
 
 
 
@@ -136,11 +136,11 @@ class SBRigidSpineRobotCfg(BaseConfig):
         # Accordingly to the URDF file:
         foot_name = "foot" 
         penalize_contacts_on = ["l1", "l2"]
-        terminate_after_contacts_on = ["body", "l1"]
+        terminate_after_contacts_on = ["body", "l1", "rear"]
 
         self_collisions = 1 #
         hip_link_length = 0.0555 
-        thigh_link_length = 0.2
+        thigh_link_length = 0.2083
         calf_link_length = 0.2
         spine_locked = True
         num_CPGs = 4
@@ -150,12 +150,12 @@ class SBRigidSpineRobotCfg(BaseConfig):
         alpha_latency =0.43
         randomize_PD = True
         stiffness_range = [30., 100.] # [N*m/rad]
-        damping_range = [0.5, 2.]     # [N*m*s/r
-        randomize_friction = False
-        friction_range = [0.3,1.0]
-        randomize_base_mass = False 
+        damping_range = [0.1, 2.]     # [N*m*s/r
+        randomize_friction = True
+        friction_range = [0.005,1.0]
+        randomize_base_mass = True 
         added_mass_range = [0., 5.] 
-        push_robots = False 
+        push_robots = True 
         push_interval_s = 15 
         max_push_vel_xy = 0.05 
         lag_timesteps = 6
@@ -209,7 +209,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         lookat = [8., 2, 1.]  # [m]
 
     class sim:
-        dt = 0.005 #0.005
+        dt = 0.001 #0.005
         substeps = 1
         gravity = [0., 0. ,-9.81]  # [m/s^2]
         up_axis = 1  # 0 is y, 1 is z
