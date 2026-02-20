@@ -146,7 +146,7 @@ class QuadrupedWithSpine(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
-        self.reset_buf |= self.root_states[:,2] < 0.19
+        self.reset_buf |= self.root_states[:,2] < 0.15
 
     def reset_idx(self, env_ids):
         """ Reset some environments.
@@ -218,13 +218,13 @@ class QuadrupedWithSpine(BaseTask):
         self.dof_pos[:, 6] = self.dof_vel[:, 6] = 0.0
 
         if "CPG" in self.cfg.control.control_type:
-            self.obs_buf = torch.cat(( #self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    #self.projected_gravity,
+            self.obs_buf = torch.cat(( self.base_ang_vel  * self.obs_scales.ang_vel,
+                                    self.projected_gravity,
                                     self.commands[:, :1] * self.commands_scale,
                                     (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #self.dof_vel * self.obs_scales.dof_vel,
+                                    self.dof_vel * self.obs_scales.dof_vel,
                                     self.actions,
-                                    self.contact_forces[:, self.feet_indices, 2] > 1.,
+                                    #self.contact_forces[:, self.feet_indices, 2] > 1.,
                                     (self._cpg.X[:,0,:] - ((self._cpg.mu_up[0]+ self._cpg.mu_low[0]) / 2)) * self.obs_scales.dof_pos,
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
