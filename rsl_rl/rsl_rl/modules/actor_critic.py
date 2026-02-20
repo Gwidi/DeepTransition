@@ -44,10 +44,21 @@ class ActorCritic(nn.Module):
                         critic_hidden_dims=[256, 256, 256],
                         activation='elu',
                         init_noise_std=1.0,
+                        normalize_obs=False,
+                        normalize_clip=10.0,
                         **kwargs):
         if kwargs:
             print("ActorCritic.__init__ got unexpected arguments, which will be ignored: " + str([key for key in kwargs.keys()]))
         super(ActorCritic, self).__init__()
+
+        # Observation normalization
+        self.normalize_obs = normalize_obs
+        if normalize_obs:
+            self.obs_normalizer = EmpiricalNormalization(num_actor_obs, clip=normalize_clip)
+            self.critic_obs_normalizer = EmpiricalNormalization(num_critic_obs, clip=normalize_clip)
+        else:
+            self.obs_normalizer = None
+            self.critic_obs_normalizer = None
 
         activation = get_activation(activation)
 
@@ -118,6 +129,8 @@ class ActorCritic(nn.Module):
         return self.distribution.entropy().sum(dim=-1)
 
     def update_distribution(self, observations):
+        if self.obs_normalizer is not None:
+            observations = self.obs_normalizer(observations)
         mean = self.actor(observations)
         self.distribution = Normal(mean, mean*0. + self.std)
 
@@ -129,10 +142,14 @@ class ActorCritic(nn.Module):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
+        if self.obs_normalizer is not None:
+            observations = self.obs_normalizer.normalize(observations)
         actions_mean = self.actor(observations)
         return actions_mean
 
     def evaluate(self, critic_observations, **kwargs):
+        if self.critic_obs_normalizer is not None:
+            critic_observations = self.critic_obs_normalizer(critic_observations)
         value = self.critic(critic_observations)
         return value
 
@@ -154,3 +171,45 @@ def get_activation(act_name):
     else:
         print("invalid activation function!")
         return None
+
+class EmpiricalNormalization(nn.Module):
+    """Running mean/variance normalization (Welford's algorithm).
+    
+    Tracks running statistics during training and normalizes observations
+    to zero mean and unit variance. Statistics are stored as buffers,
+    so they are automatically saved/loaded with the model.
+    """
+    def __init__(self, shape, epsilon=1e-5, clip=10.0):
+        super().__init__()
+        self.epsilon = epsilon
+        self.clip = clip
+        self.register_buffer('running_mean', torch.zeros(shape))
+        self.register_buffer('running_var', torch.ones(shape))
+        self.register_buffer('count', torch.tensor(epsilon, dtype=torch.float64))
+
+    def forward(self, x):
+        if self.training and not torch.is_grad_enabled():
+            self.update(x)
+        return self.normalize(x)
+
+    def normalize(self, x):
+        return torch.clamp(
+            (x - self.running_mean) / torch.sqrt(self.running_var + self.epsilon),
+            -self.clip, self.clip
+        )
+
+    @torch.no_grad()
+    def update(self, x):
+        batch_mean = x.mean(dim=0)
+        batch_var = x.var(dim=0, unbiased=False)
+        batch_count = x.shape[0]
+
+        delta = batch_mean - self.running_mean
+        tot_count = self.count + batch_count
+
+        self.running_mean.copy_(self.running_mean + delta * batch_count / tot_count)
+        m_a = self.running_var * self.count
+        m_b = batch_var * batch_count
+        m2 = m_a + m_b + delta.pow(2) * self.count * batch_count / tot_count
+        self.running_var.copy_(m2 / tot_count)
+        self.count.copy_(tot_count)
