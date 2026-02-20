@@ -40,16 +40,16 @@ class CPG_RL():
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.32, 
+          robot_height=0.28, 
           des_step_len=0.05,
-          ground_clearance=0.07,
-          ground_penetration=0.01,
+          ground_clearance=0.05,
+          ground_penetration=0.015,
           num_envs=1,
           device=None,
           rl_task_string=None,
           mu_low = 1.0,
           mu_up = 2.0,
-          max_step_len = 0.2,
+          max_step_len = 0.16,
           num_CPGs = 4,
         ):
         self._rl_task_string = rl_task_string
@@ -86,10 +86,10 @@ class CPG_RL():
 
         self._des_step_len = des_step_len
 
-        self.robot_height_range = [0.18, 0.35] # min and max height of the CPG oscillation center
-        self.ground_clearance_range = [0.02, 0.12]
-        self.ground_penetration_range = [0.00, 0.015]
-        self.offset_x_range = [-0.08, 0.03]
+        self.robot_height_range = [0.22, 0.28] # min and max height of the CPG oscillation center
+        self.ground_clearance_range = [0.04, 0.09]
+        self.ground_penetration_range = [0.01, 0.025]
+        self.offset_x_range = [-0.05, 0.05]
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
@@ -98,7 +98,7 @@ class CPG_RL():
         if "SPINE" in self._rl_task_string:
             self.X[env_ids,1,4] = 0.0 # spine initial phase
         self.X_dot[env_ids,:,:] = 0.
-        # self._resample_parameters(env_ids)
+        self._resample_parameters(env_ids)
 
     def _resample_parameters(self, env_ids):
         """ Resample parameters h, xoff, gc, and gp  used by the CPG controller for some environments
@@ -354,17 +354,20 @@ class CPG_RL():
     #     return output
     
     def compute_inverse_kinematics(self,robot,legID, x, y, z):
-        l1 = robot.hip_link_length
+        l1 = 0.0125
         l2 = robot.thigh_link_length
         l3 = robot.calf_link_length
+
+        l1_x= 0.0555
+        x_for_ik = x - l1_x
 
         dist_sq_yz = y**2 + z**2
         sqrt_component = dist_sq_yz - l1**2
         sqrt_component = torch.clip(sqrt_component, min=0.0)
         dist_yz = torch.sqrt(sqrt_component)
 
-        D = (y**2 + (-z)**2 - l1**2 +
-        (-x)**2 - l2**2 - l3**2) / (
+        D = (dist_yz**2 +
+        x_for_ik**2 - l2**2 - l3**2) / (
                  2 * l3 * l2)
         D = torch.clip(D, -1.0, 1.0)
 
@@ -378,24 +381,26 @@ class CPG_RL():
 
         if legID == 1 or legID == 3:
             knee_angle *= -1 # reversed tf 
-        sqrt_component = y**2 + (-z)**2 - l1**2
+        
         hip_roll_angle = -1*(-torch.atan2(z, y) - torch.atan2(
             torch.sqrt(sqrt_component), sideSign*l1*torch.ones_like(x)))
+        if legID >= 2:
+            hip_roll_angle = -hip_roll_angle
 
         
         # 5. HIP THIGH (Pitch)
         # Alpha angle: inclination resulting from x and vertical distance
-        alpha = torch.atan2(-x, dist_yz)
+        alpha = torch.atan2(-x_for_ik, dist_yz)
         # Beta angle: correction resulting from thigh and shin triangle
         # We use acos because standard atan2 with your knee definition fails
-        cos_beta = (l2**2 + (x**2 + dist_yz**2) - l3**2) / (2 * l2 * torch.sqrt(x**2 + dist_yz**2))
+        cos_beta = (l2**2 + (x_for_ik**2 + dist_yz**2) - l3**2) / (2 * l2 * torch.sqrt(x_for_ik**2 + dist_yz**2))
         cos_beta = torch.clip(cos_beta, -1.0, 1.0)
         beta = torch.acos(cos_beta)
         
         if legID == 1 or legID == 3:
             hip_thigh_angle = alpha - beta
         else: 
-            hip_thigh_angle = alpha + beta
+            hip_thigh_angle = -alpha + beta
 
 
         output= torch.stack([hip_roll_angle, hip_thigh_angle, knee_angle], dim=-1)
