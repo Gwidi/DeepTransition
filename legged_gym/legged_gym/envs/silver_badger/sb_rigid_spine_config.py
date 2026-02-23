@@ -75,7 +75,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.15 , 1.5] # min max [m/s]
+            lin_vel_x = [ 0.15 , 1.0] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -111,8 +111,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
         action_scale = 1.0
 
         decimation = 10
-        stiffness = {'j': 100}  # [N*m/rad]
-        damping = {'j': 2.0}     # [N*m*s/rad]
+        stiffness = {'j': 25}  # [N*m/rad]
+        damping = {'j': 0.8}     # [N*m*s/rad]
 
 
 
@@ -149,8 +149,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
         latency = False
         alpha_latency =0.43
         randomize_PD = True
-        stiffness_range = [30., 100.] # [N*m/rad]
-        damping_range = [0.1, 2.]     # [N*m*s/r
+        stiffness_range = [20., 35.] # [N*m/rad]
+        damping_range = [0.5, 1.2]     # [N*m*s/r
         randomize_friction = True
         friction_range = [0.005,1.0]
         randomize_base_mass = True 
@@ -183,10 +183,10 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class normalization:
         class obs_scales:
-            lin_vel = 2.0
-            ang_vel = 0.25
+            lin_vel = 1.0
+            ang_vel = 1.0
             dof_pos = 1.0
-            dof_vel = 0.05
+            dof_vel = 1.0
             height_measurements = 5.0
         clip_observations = 100.
         clip_actions = 1 #4 #100.
@@ -219,10 +219,10 @@ class SBRigidSpineRobotCfg(BaseConfig):
             solver_type = 1  # 0: pgs, 1: tgs
             num_position_iterations = 4
             num_velocity_iterations = 0
-            contact_offset = 0.01  # [m]
+            contact_offset = 0.002  # [m]
             rest_offset = 0.0   # [m]
-            bounce_threshold_velocity = 0.5 #0.5 [m/s]
-            max_depenetration_velocity = 1.0
+            bounce_threshold_velocity = 0.2 #0.5 [m/s]
+            max_depenetration_velocity = 5.0
             max_gpu_contact_pairs = 2**23 #2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             contact_collection = 2 # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
