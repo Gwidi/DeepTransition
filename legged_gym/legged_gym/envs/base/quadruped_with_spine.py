@@ -344,9 +344,19 @@ class QuadrupedWithSpine(BaseTask):
                 self.dof_pos_limits[i, 0] = m - 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
                 self.dof_pos_limits[i, 1] = m + 0.5 * r * self.cfg.rewards.soft_dof_pos_limit
 
+                # 1. Enforce the strict MuJoCo XML Effort Limits
+                name = self.dof_names[i]
+                if "sp_" in name:
+                    props["effort"][i] = 48.0
+                else:
+                    props["effort"][i] = 16.0
+                self.torque_limits[i] = props["effort"][i]
+
+
                 props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
                 props["stiffness"][i] = 0.0
-                props["damping"][i] = 0.0
+                props["damping"][i] = 0.1
+                props["friction"][i] = 0.48
                 
         return props
 
