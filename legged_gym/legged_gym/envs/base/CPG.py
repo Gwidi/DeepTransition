@@ -36,7 +36,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="TROT",
+          gait="BOUND",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
@@ -49,7 +49,7 @@ class CPG_RL():
           rl_task_string=None,
           mu_low = 1.0,
           mu_up = 2.0,
-          max_step_len = 0.16,
+          max_step_len = 0.2,
           num_CPGs = 4,
         ):
         self._rl_task_string = rl_task_string
@@ -88,8 +88,8 @@ class CPG_RL():
 
         self.robot_height_range = [0.22, 0.28] # min and max height of the CPG oscillation center
         self.ground_clearance_range = [0.04, 0.09]
-        self.ground_penetration_range = [0.01, 0.025]
-        self.offset_x_range = [-0.05, 0.05]
+        self.ground_penetration_range = [0.0, 0.015]
+        self.offset_x_range = [-0.08, 0.02]
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
@@ -260,13 +260,13 @@ class CPG_RL():
         MAX_SPINE_ANGLE = torch.tensor(5.0 * np.pi / 180) # 15° in radians
   
         device = self._device 
-        a = actions
+        a = torch.clip(actions, -1, 1)
         if "SPINE" in self._rl_task_string:
             self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high)
         else:
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
-            self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high)
+            self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high) * (2*np.pi)
         
 
         self.integrate_oscillator_equations()

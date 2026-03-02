@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 57
+        num_observations = 60
         num_privileged_obs = 64 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 8 
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -65,7 +65,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         curriculum = False
         max_curriculum = 3.0
         gait_resampling_time = 3.0
-        resample_gait_style = False
+        resample_gait_style = True
         save_data= False
         num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
@@ -75,7 +75,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.15 , 1.0] # min max [m/s]
+            lin_vel_x = [ 0.3 , 2.0] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -108,11 +108,11 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class control:
         control_type = 'CPG_OFFSETX'
-        action_scale = 1.0
+        action_scale = 0.25
 
         decimation = 10
-        stiffness = {'j': 25}  # [N*m/rad]
-        damping = {'j': 0.8}     # [N*m*s/rad]
+        stiffness = {'j': 100.0}  # [N*m/rad]
+        damping = {'j': 2.0}     # [N*m*s/rad]
 
 
 
@@ -148,11 +148,11 @@ class SBRigidSpineRobotCfg(BaseConfig):
     class domain_rand:
         latency = False
         alpha_latency =0.43
-        randomize_PD = True
+        randomize_PD = False
         stiffness_range = [20., 35.] # [N*m/rad]
         damping_range = [0.5, 1.2]     # [N*m*s/r
         randomize_friction = True
-        friction_range = [0.005,1.0]
+        friction_range = [0.3, 1.0]
         randomize_base_mass = True 
         added_mass_range = [0., 5.] 
         push_robots = True 
@@ -183,13 +183,13 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class normalization:
         class obs_scales:
-            lin_vel = 1.0
-            ang_vel = 1.0
+            lin_vel = 2.0
+            ang_vel = 0.25
             dof_pos = 1.0
-            dof_vel = 1.0
+            dof_vel = 0.05
             height_measurements = 5.0
         clip_observations = 100.
-        clip_actions = 1 #4 #100.
+        clip_actions = 100 #4 #100.
 
     class noise:
         add_noise = False #True
@@ -235,7 +235,7 @@ class SBRigidSpineRobotCfgPPO(BaseConfig):
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
-        normalize_obs=True
+        normalize_obs=False
         normalize_clip=10.0
 
     class algorithm:
@@ -243,7 +243,7 @@ class SBRigidSpineRobotCfgPPO(BaseConfig):
         value_loss_coef = 1.0
         use_clipped_value_loss = True
         clip_param = 0.2
-        entropy_coef = 0.001
+        entropy_coef = 0.01
         num_learning_epochs = 5
         num_mini_batches = 4 # mini batch size = num_envs*nsteps / nminibatches
         learning_rate = 1.e-3 
