@@ -26,9 +26,9 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 69 # 136 with active spine
-        num_privileged_obs = 136 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 14 # Amplitudes, frequencies and offsets for 4 legs
+        num_observations = 59 # 136 with active spine
+        num_privileged_obs = 66 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_actions = 10 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -44,7 +44,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         static_friction = 1.0
         dynamic_friction = 1.0
         restitution = 0.
-        measure_heights = True
+        measure_heights = False
 
         measured_points_x = [  0.13, 0.18, 0.23, 0.28, 0.32, 0.37, 0.43, 0.48,0.52,0.57,0.62,0.67 ] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.23, -0.15, 0.,0.15, 0.23]
@@ -58,19 +58,21 @@ class SBActiveSpineRobotCfg(BaseConfig):
         terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
-        # mesh_type = 'plane'
 
 
     class commands:
+        curriculum = False
+        gait_resampling_time = 3.0
+        resample_gait_style = True
         save_data= False
-        num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 1 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 5  # time before command are changed[s]
-        heading_command = True #True # if true: compute ang vel command from heading error
+        heading_command = False #True # if true: compute ang vel command from heading error
         max_vel_x = 1.2
-        freq_max= 40
-        freq_low= -5
+        freq_max= 8
+        freq_low= 0
         class ranges:
-            lin_vel_x = [ 1.0 , 1.243] # min max [m/s]
+            lin_vel_x = [ 0.3 , 2.0] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -119,23 +121,23 @@ class SBActiveSpineRobotCfg(BaseConfig):
         replace_cylinder_with_capsule = True # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = False # Some .obj meshes must be flipped from y-up to z-up. Check your model's orientation.
 
-        density = 0.001
+        #density = 0.001
         angular_damping = 0.
         linear_damping = 0.
         max_angular_velocity = 1000.
         max_linear_velocity = 1000.
-        armature = 0.
-        thickness = 0.01
+        armature = 0.013122
+        thickness = 0.002
 
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/silver_badger/urdf/intention.urdf'
         # Accordingly to the URDF file:
         foot_name = "foot" 
         penalize_contacts_on = ["l1", "l2"]
-        terminate_after_contacts_on = ["body"]
+        terminate_after_contacts_on = ["body", "l1", "rear"]
 
         self_collisions = 1 #
-        hip_link_length = 0.0752
-        thigh_link_length = 0.2
+        hip_link_length = 0.0555
+        thigh_link_length = 0.2083
         calf_link_length = 0.2
         spine_locked = False
         num_CPGs = 5 # 4 for legs only, 5 for legs + spine
@@ -144,24 +146,24 @@ class SBActiveSpineRobotCfg(BaseConfig):
         latency =False
         alpha_latency =0.43
         randomize_PD = False
+        stiffness_range = [20., 35.] # [N*m/rad]
+        damping_range = [0.5, 1.2]     # [N*m*s/r
         randomize_friction = True
-        friction_range = [0.2,1.5]
+        friction_range = [0.3,1.0]
         randomize_base_mass = True 
-        added_mass_range = [-1., 6.] 
-        push_robots = False 
-        push_interval_s = 1 
-        max_push_vel_xy = 0.03 
+        added_mass_range = [0., 5.] 
+        push_robots = True 
+        push_interval_s = 15 
+        max_push_vel_xy = 0.05 
         lag_timesteps = 6
         randomize_lag_timesteps = False
 
     class rewards:
         class scales:
-            tracking_lin_vel = 0.01  
-            orientation = -20.
-            orientation_yaw = -30.003 
-            energy = -0.001 
-            locomotion_distance = 800.7230
-            feet_contact_forces = -0.01
+            tracking_lin_vel = 3.0 
+            linear_velocity = -2.0
+            angular_velocity = -0.1
+            energy = -0.001
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
@@ -182,7 +184,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         clip_actions = 100 #4 #100.
 
     class noise:
-        add_noise = True
+        add_noise = False
         noise_level = 1.0 # scales other values
         class noise_scales:
             dof_pos = 0.03 
@@ -199,7 +201,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         lookat = [8., 2, 1.]  # [m]
 
     class sim:
-        dt = 0.005 #0.005
+        dt = 0.001 #0.005
         substeps = 1
         gravity = [0., 0. ,-9.81]  # [m/s^2]
         up_axis = 1  # 0 is y, 1 is z
@@ -209,10 +211,10 @@ class SBActiveSpineRobotCfg(BaseConfig):
             solver_type = 1  # 0: pgs, 1: tgs
             num_position_iterations = 4
             num_velocity_iterations = 0
-            contact_offset = 0.01  # [m]
+            contact_offset = 0.002  # [m]
             rest_offset = 0.0   # [m]
-            bounce_threshold_velocity = 0.5 #0.5 [m/s]
-            max_depenetration_velocity = 1.0
+            bounce_threshold_velocity = 0.2 #0.5 [m/s]
+            max_depenetration_velocity = 5.0
             max_gpu_contact_pairs = 2**23 #2**24 -> needed for 8000 envs and more
             default_buffer_size_multiplier = 5
             contact_collection = 2 # 0: never, 1: last sub-step, 2: all sub-steps (default=2)
@@ -225,6 +227,8 @@ class SBActiveSpineRobotCfgPPO(BaseConfig):
         actor_hidden_dims = [512, 256, 128]
         critic_hidden_dims = [512, 256, 128]
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
+        normalize_obs = False
+        normalize_clip = 10.0
 
     class algorithm:
         # training params
@@ -247,14 +251,16 @@ class SBActiveSpineRobotCfgPPO(BaseConfig):
         num_steps_per_env = 24#64 # per iteration
         max_iterations = 1500 # number of policy updates
         # logging
-        save_interval = 50 # check for potential saves every this many iterations
-        experiment_name = 'silver_badger' 
+        save_interval = 1000 # check for potential saves every this many iterations
+        experiment_name = 'silver_badger_active_spine' 
         run_name = ''
         # load and resume
         resume = False
         load_run = -1 # -1 = last run
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
+        wandb_project ='silver_badger_active_spine'
+        wandb_entity = 'cpg_put'
 
 
   
