@@ -350,14 +350,12 @@ class QuadrupedWithSpine(BaseTask):
                     props["effort"][i] = 48.0
                 else:
                     props["effort"][i] = 16.0
-                self.torque_limits[i] = props["effort"][i]
+                self.torque_limits[i] = props["effort"][i].item()
 
 
                 props["driveMode"][i] = gymapi.DOF_MODE_EFFORT
                 props["stiffness"][i] = 0.0
                 props["damping"][i] = 0.1
-                props["friction"][i] = 0.48
-                
         return props
 
     def _process_rigid_body_props(self, props, env_id):
