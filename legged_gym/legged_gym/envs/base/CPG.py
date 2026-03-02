@@ -174,6 +174,14 @@ class CPG_RL():
         transverse_gallop = 2 *np.pi * transverse_gallop
         rotary_gallop = 2 *np.pi * rotary_gallop
 
+        # If SPINE mode, expand all gait matrices to 5x5 with spine coupling
+        if "SPINE" in self._rl_task_string:
+            gaits_4x4 = [trot, walk, pace, bound, pronk, canter, transverse_gallop, rotary_gallop, amble]
+            expanded_gaits = []
+            for g in gaits_4x4:
+                expanded_gaits.append(self._expand_gait_with_spine(g))
+            trot, walk, pace, bound, pronk, canter, transverse_gallop, rotary_gallop, amble = expanded_gaits
+
         self.available_gaits = [
             trot,
             walk,
@@ -226,6 +234,44 @@ class CPG_RL():
             print('CANTER')
         else:
             raise ValueError( gait + 'not implemented.')
+        
+    def _expand_gait_with_spine(self, gait_4x4):
+        """Expand a 4x4 leg coupling matrix to 5x5 by adding spine (5th oscillator).
+        
+        Spine coupling convention for Silver Badger:
+        - Spine oscillates in anti-phase with the diagonal leg pairs
+        - Front legs (FL, FR) couple to spine: spine leads front legs by π/4 (45°)
+        - Rear legs (RL, RR) couple to spine: spine leads rear legs by -π/4
+        - This creates a lateral bending wave from head to tail
+        """
+        device = self._device
+        gait_5x5 = torch.zeros(5, 5, dtype=torch.float, device=device, requires_grad=False)
+        
+        # Copy the original 4x4 leg coupling
+        gait_5x5[:4, :4] = gait_4x4
+        
+        # Spine-to-leg coupling (row 4: how spine phase relates to each leg)
+        # Convention: phi_spine_to_FL, phi_spine_to_FR, phi_spine_to_RL, phi_spine_to_RR
+        # For bounding-like gaits: spine is in-phase with front-rear alternation
+        # Front legs: spine leads by +π/4 
+        # Rear legs: spine leads by -π/4 (opposite bending)
+        spine_to_front_phase = torch.tensor(np.pi / 4, device=device)
+        spine_to_rear_phase = torch.tensor(-np.pi / 4, device=device)
+        
+        # Spine -> Legs (row index 4)
+        gait_5x5[4, 0] = -spine_to_front_phase  # spine to FL
+        gait_5x5[4, 1] = -spine_to_front_phase  # spine to FR
+        gait_5x5[4, 2] = -spine_to_rear_phase   # spine to RL
+        gait_5x5[4, 3] = -spine_to_rear_phase   # spine to RR
+        
+        # Legs -> Spine (column index 4) — antisymmetric
+        gait_5x5[0, 4] = spine_to_front_phase   # FL to spine
+        gait_5x5[1, 4] = spine_to_front_phase   # FR to spine
+        gait_5x5[2, 4] = spine_to_rear_phase    # RL to spine
+        gait_5x5[3, 4] = spine_to_rear_phase    # RR to spine
+        
+        # Spine to itself = 0 (already zero)
+        return gait_5x5
 
 
     def update(self):
@@ -257,7 +303,7 @@ class CPG_RL():
         MU_LOW = self.mu_low[0]
         MU_UPP = self.mu_up[0]
         MAX_STEP_LEN = self.max_step_len[0]
-        MAX_SPINE_ANGLE = torch.tensor(5.0 * np.pi / 180) # 15° in radians
+        MAX_SPINE_ANGLE = torch.tensor(15.0 * np.pi / 180) # 15° in radians
   
         device = self._device 
         a = torch.clip(actions, -1, 1)
@@ -272,11 +318,13 @@ class CPG_RL():
         self.integrate_oscillator_equations()
         
         x = torch.clip(self.X[:,0,:4],MU_LOW,MU_UPP)
-        if "SPINE" in self._rl_task_string: 
-            sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP) 
         x = MAX_STEP_LEN * (x - MU_LOW) / (MU_UPP - MU_LOW)
-        if "SPINE" in self._rl_task_string:
-            sp = MAX_SPINE_ANGLE * (sp - MU_LOW) / (MU_UPP - MU_LOW)
+        
+        if "SPINE" in self._rl_task_string: 
+            sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP)
+            sp = MAX_SPINE_ANGLE * (sp - MU_LOW) / (MU_UPP - MU_LOW) 
+        
+            
  
         if "OFFSETX" in self._rl_task_string:
             x = -x * torch.cos(self.X[:,1,:4]) - self._offset_x
@@ -309,7 +357,7 @@ class CPG_RL():
 
             coupling_effect = torch.zeros_like(self._omega_residuals)
             if self._couple:
-                for i in range(4):
+                for i in range(self.num_CPGs):
                     coupling_effect[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI_batch[:,i,:]) , 1)
             X_dot[:,1,:] = self._omega_residuals + coupling_effect
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
