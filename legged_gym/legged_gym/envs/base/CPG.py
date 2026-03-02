@@ -80,9 +80,7 @@ class CPG_RL():
         self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
-        self.X[:,1,:4] = self.PHI[0,:] #* 0.0
-        if "SPINE" in rl_task_string:
-            self.X[:,1,4] = 0.0 # spine initial phase
+        self.X[:,1,:] = self.PHI[0,:] #* 0.0
 
         self._des_step_len = des_step_len
 
@@ -94,9 +92,7 @@ class CPG_RL():
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
         self.X[env_ids,0,:] = torch.rand(len(env_ids),self.num_CPGs,device=self._device) * .1
-        self.X[env_ids,1,:4] = self.PHI[0,:] *0.0
-        if "SPINE" in self._rl_task_string:
-            self.X[env_ids,1,4] = 0.0 # spine initial phase
+        self.X[env_ids,1,:] = self.PHI[0,:] *0.0
         self.X_dot[env_ids,:,:] = 0.
         self._resample_parameters(env_ids)
 

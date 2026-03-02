@@ -26,8 +26,8 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 59 # 136 with active spine
-        num_privileged_obs = 66 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_observations = 63 # 136 with active spine
+        num_privileged_obs = 70 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 10 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
