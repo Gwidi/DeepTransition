@@ -36,7 +36,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
-          gait="BOUND",
+          gait="TROT",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
@@ -305,7 +305,7 @@ class CPG_RL():
         a = torch.clip(actions, -1, 1)
         if "SPINE" in self._rl_task_string:
             self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
-            self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high)
+            self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high) * (2*np.pi)
         else:
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high) * (2*np.pi)
