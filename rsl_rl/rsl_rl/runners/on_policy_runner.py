@@ -40,6 +40,7 @@ from rsl_rl.algorithms import PPO
 from rsl_rl.modules import ActorCritic, ActorCriticRecurrent
 from rsl_rl.env import VecEnv
 import wandb
+from legged_gym.utils.helpers import class_to_dict
 
 
 class OnPolicyRunner:
@@ -50,6 +51,7 @@ class OnPolicyRunner:
                  log_dir=None,
                  device='cpu'):
 
+        self.train_cfg = train_cfg
         self.cfg=train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
@@ -82,8 +84,13 @@ class OnPolicyRunner:
         _, _ = self.env.reset()
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
+        try:
+            
+            env_cfg_dict = class_to_dict(self.env.cfg)
+        except Exception:
+            env_cfg_dict = {}
         # initialize writer
-        wandb.init(project=self.cfg["wandb_project"], entity=self.cfg["wandb_entity"], sync_tensorboard=True)
+        wandb.init(project=self.cfg["wandb_project"], entity=self.cfg["wandb_entity"], sync_tensorboard=True, config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict})
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
