@@ -189,6 +189,30 @@ class QuadrupedWithSpine(BaseTask):
                 self.lag_buffer[i][env_ids, :] = 0
         if self.cfg.domain_rand.latency:
             self.torques_prev[env_ids] = 0.
+        if self.cfg.domain_rand.randomize_PD:
+            rand_kp = torch_rand_float(
+                self.cfg.domain_rand.stiffness_range[0], 
+                self.cfg.domain_rand.stiffness_range[1], 
+                (len(env_ids), 1), device=self.device).squeeze(1) # shape: [len(env_ids)]
+                
+            rand_kd = torch_rand_float(
+                self.cfg.domain_rand.damping_range[0], 
+                self.cfg.domain_rand.damping_range[1], 
+                (len(env_ids), 1), device=self.device).squeeze(1) # shape: [len(env_ids)]
+
+            spine_active = ("SPINE" in self.cfg.control.control_type) and not self.cfg.asset.spine_locked
+
+            for i in range(self.num_dofs):
+                if i != self.spine_idx:
+                    self.p_gains[env_ids, i] = rand_kp
+                    self.d_gains[env_ids, i] = rand_kd
+                else:
+                    if spine_active:
+                        self.p_gains[env_ids, i] = rand_kp
+                        self.d_gains[env_ids, i] = rand_kd
+                    else:
+                        self.p_gains[env_ids, i] = 0.0
+                        self.d_gains[env_ids, i] = 0.0
     
     def compute_reward(self):
         """ Compute rewards
@@ -215,7 +239,8 @@ class QuadrupedWithSpine(BaseTask):
         """
         #print(self.max_vel.unsqueeze(1).size(), self.actions.size())
 
-        self.dof_pos[:, 6] = self.dof_vel[:, 6] = 0.0
+        if not "SPINE" in self.cfg.control.control_type:
+            self.dof_pos[:, 6] = self.dof_vel[:, 6] = 0.0
 
         if "CPG" in self.cfg.control.control_type:
             self.obs_buf = torch.cat(( self.base_ang_vel  * self.obs_scales.ang_vel,
@@ -633,41 +658,23 @@ class QuadrupedWithSpine(BaseTask):
             self.default_dof_pos[i] = angle
         
 
-        # PD randomization
-        if self.cfg.domain_rand.randomize_PD:
-            # Randomize PD gains for each environment and each DOF independently (can be used to randomize the gains of the spine joints differently from the legs joints for example)
-            # Kp: [30, 100]
-            self.p_gains = torch_rand_float(
-                self.cfg.domain_rand.stiffness_range[0], 
-                self.cfg.domain_rand.stiffness_range[1], 
-                (self.num_envs, self.num_dofs), 
-                device=self.device
-            )
-            # Kd: [0.5, 2.0]
-            self.d_gains = torch_rand_float(
-                self.cfg.domain_rand.damping_range[0], 
-                self.cfg.domain_rand.damping_range[1], 
-                (self.num_envs, self.num_dofs), 
-                device=self.device
-            )
-        else:
-            # Set PD gains based on the cfg values 
-            p_gains_vec = torch.zeros(self.num_dofs, device=self.device)
-            d_gains_vec = torch.zeros(self.num_dofs, device=self.device)
-            for i in range(self.num_dofs):
-                name = self.dof_names[i]
-                found = False
-                for dof_name in self.cfg.control.stiffness.keys():
-                    if dof_name in name:
-                        p_gains_vec[i] = self.cfg.control.stiffness[dof_name]
-                        d_gains_vec[i] = self.cfg.control.damping[dof_name]
-                        found = True
-                if not found:
-                    p_gains_vec[i] = 0.
-                    d_gains_vec[i] = 0.
+        # Set PD gains based on the cfg values 
+        p_gains_vec = torch.zeros(self.num_dofs, device=self.device)
+        d_gains_vec = torch.zeros(self.num_dofs, device=self.device)
+        for i in range(self.num_dofs):
+            name = self.dof_names[i]
+            found = False
+            for dof_name in self.cfg.control.stiffness.keys():
+                if dof_name in name:
+                    p_gains_vec[i] = self.cfg.control.stiffness[dof_name]
+                    d_gains_vec[i] = self.cfg.control.damping[dof_name]
+                    found = True
+            if not found:
+                p_gains_vec[i] = 0.
+                d_gains_vec[i] = 0.
 
-            self.p_gains = p_gains_vec.repeat(self.num_envs, 1)
-            self.d_gains = d_gains_vec.repeat(self.num_envs, 1)
+        self.p_gains = p_gains_vec.repeat(self.num_envs, 1)
+        self.d_gains = d_gains_vec.repeat(self.num_envs, 1)
 
         # Handle Spine Actuation Conditionally
         # Check if spine is actively used by the RL policy
