@@ -84,13 +84,10 @@ class OnPolicyRunner:
         _, _ = self.env.reset()
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
-        try:
-            
+        try: 
             env_cfg_dict = class_to_dict(self.env.cfg)
-            cpg_dict = class_to_dict(self.env._cpg)
         except Exception:
             env_cfg_dict = {}
-            cpg_dict = {}
         # initialize writer
         wandb.init(project=self.cfg["wandb_project"], entity=self.cfg["wandb_entity"], sync_tensorboard=True, config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict})
         if self.log_dir is not None and self.writer is None:
