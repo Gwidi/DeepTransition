@@ -104,7 +104,7 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
+        #self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
 
  
 
@@ -269,6 +269,8 @@ class CPG_RL():
         # Spine to itself = 0 (already zero)
         return gait_5x5
 
+    def update_offset_x(self,offset):
+        self._offset_x = offset
 
     def update(self):
         """ Update oscillator states. """
@@ -310,6 +312,11 @@ class CPG_RL():
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high) * (2*np.pi)
         
+
+        if "OFFSETX" in self._rl_task_string:
+          offset = self._scale_helper( a[:,10:14],-0.07, 0.07) 
+          self.update_offset_x(offset)
+
 
         self.integrate_oscillator_equations()
         
