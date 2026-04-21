@@ -226,6 +226,8 @@ class OnPolicyRunner:
             'iter': self.current_learning_iteration,
             'infos': infos,
             }, path)
+        if wandb.run is not None: 
+            wandb.save(path, base_path=self.log_dir, policy="now")
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
