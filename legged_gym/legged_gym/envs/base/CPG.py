@@ -78,6 +78,11 @@ class CPG_RL():
         self._dt = time_step
         self._set_gait(gait)
         self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
+
+        self.gait_names = ["TROT", "WALK", "PACE", "BOUND", "PRONK", "CANTER", "TRANSVERSE_GALLOP", "ROTARY_GALLOP", "AMBLE"]
+        initial_gait_idx = self.gait_names.index(gait) if gait in self.gait_names else 0
+        self.current_gait_indices = torch.full((self.num_envs,), initial_gait_idx, dtype=torch.long, device=device)
+        self.previous_gait_indices = self.current_gait_indices.clone()
         
         self.X[:,0,:] = torch.rand(num_envs,self.num_CPGs,device=self._device) * .1
         self.X[:,1,:] = self.PHI[0,:] #* 0.0
@@ -234,11 +239,8 @@ class CPG_RL():
     def _expand_gait_with_spine(self, gait_4x4):
         """Expand a 4x4 leg coupling matrix to 5x5 by adding spine (5th oscillator).
         
-        Spine coupling convention for Silver Badger:
-        - Spine oscillates in anti-phase with the diagonal leg pairs
-        - Front legs (FL, FR) couple to spine: spine leads front legs by π/4 (45°)
-        - Rear legs (RL, RR) couple to spine: spine leads rear legs by -π/4
-        - This creates a lateral bending wave from head to tail
+        W tej wersji usuwamy sztywne sprzężenie kręgosłupa. Agent (RL) sam
+        nauczy się synchronizować kręgosłup za pomocą omega_residuals.
         """
         device = self._device
         gait_5x5 = torch.zeros(5, 5, dtype=torch.float, device=device, requires_grad=False)
@@ -246,27 +248,8 @@ class CPG_RL():
         # Copy the original 4x4 leg coupling
         gait_5x5[:4, :4] = gait_4x4
         
-        # Spine-to-leg coupling (row 4: how spine phase relates to each leg)
-        # Convention: phi_spine_to_FL, phi_spine_to_FR, phi_spine_to_RL, phi_spine_to_RR
-        # For bounding-like gaits: spine is in-phase with front-rear alternation
-        # Front legs: spine leads by +π/4 
-        # Rear legs: spine leads by -π/4 (opposite bending)
-        spine_to_front_phase = torch.tensor(np.pi / 4, device=device)
-        spine_to_rear_phase = torch.tensor(-np.pi / 4, device=device)
+        # Kręgosłup nie jest sprzężony z nogami - wiersz 4 i kolumna 4 zostają zerami.
         
-        # Spine -> Legs (row index 4)
-        gait_5x5[4, 0] = -spine_to_front_phase  # spine to FL
-        gait_5x5[4, 1] = -spine_to_front_phase  # spine to FR
-        gait_5x5[4, 2] = -spine_to_rear_phase   # spine to RL
-        gait_5x5[4, 3] = -spine_to_rear_phase   # spine to RR
-        
-        # Legs -> Spine (column index 4) — antisymmetric
-        gait_5x5[0, 4] = spine_to_front_phase   # FL to spine
-        gait_5x5[1, 4] = spine_to_front_phase   # FR to spine
-        gait_5x5[2, 4] = spine_to_rear_phase    # RL to spine
-        gait_5x5[3, 4] = spine_to_rear_phase    # RR to spine
-        
-        # Spine to itself = 0 (already zero)
         return gait_5x5
 
 
@@ -462,6 +445,10 @@ class CPG_RL():
         
         # Randomly select new gait indices
         random_indices = torch.randint(0, len(self.available_gaits), (len(env_ids),), device=self._device)
+        
+        # Store previous gaits for transitions
+        self.previous_gait_indices = self.current_gait_indices.clone()
+        self.current_gait_indices[env_ids] = random_indices
         
         # Assign new matrices to the batch
         self.PHI_batch[env_ids] = available[random_indices]
