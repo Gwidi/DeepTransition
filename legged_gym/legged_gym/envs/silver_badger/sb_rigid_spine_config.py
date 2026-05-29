@@ -75,7 +75,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.3 , 2.0] # min max [m/s]
+            lin_vel_x = [ 0.2 , 1.2] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -108,11 +108,11 @@ class SBRigidSpineRobotCfg(BaseConfig):
 
     class control:
         control_type = 'CPG_OFFSETX'
-        action_scale = 0.25
+        action_scale = 1.0
 
         decimation = 10
-        stiffness = {'j': 100.0}  # [N*m/rad]
-        damping = {'j': 2.0}     # [N*m*s/rad]
+        stiffness = {'j': 71.23}  # [N*m/rad]
+        damping = {'j': 1.86}     # [N*m*s/rad]
 
 
 
@@ -149,8 +149,8 @@ class SBRigidSpineRobotCfg(BaseConfig):
         latency = False
         alpha_latency =0.43
         randomize_PD = False
-        stiffness_range = [20., 35.] # [N*m/rad]
-        damping_range = [0.5, 1.2]     # [N*m*s/r
+        stiffness_range = [30., 100.] # [N*m/rad]
+        damping_range = [0.5, 2.0]     # [N*m*s/r
         randomize_friction = True
         friction_range = [0.3, 1.0]
         randomize_base_mass = True 
@@ -170,7 +170,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
             # orientation_yaw = -0.01
             energy = -0.001
             #locomotion_distance = 800.7230
-            #feet_contact_forces = -0.01
+            feet_contact_forces = -0.01
             
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)

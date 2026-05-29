@@ -26,7 +26,7 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 63 # 136 with active spine
+        num_observations = 66 # 136 with active spine
         num_privileged_obs = 70 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 10 # Amplitudes, frequencies and offsets for 4 legs
         env_spacing = 3.  # not used with heightfields/trimeshes 
@@ -72,7 +72,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         freq_max= 8
         freq_low= 0
         class ranges:
-            lin_vel_x = [ 0.3 , 2.0] # min max [m/s]
+            lin_vel_x = [ 0.2 , 1.2] # min max [m/s]
             lin_vel_y = [-0.0 , 0.0]   # min max [m/s]
             ang_vel_yaw = [-1e-7, 1e-7]    # min max [rad/s]
             heading = [-1e-7, 1e-7]
@@ -105,11 +105,11 @@ class SBActiveSpineRobotCfg(BaseConfig):
 
     class control:
         control_type = 'CPG_OFFSETX_SPINE'
-        action_scale = 0.25
+        action_scale = 1.0
 
         decimation = 10
-        stiffness = {'j': 100.0}  # [N*m/rad]
-        damping = {'j': 2.0}     # [N*m*s/rad]
+        stiffness = {'j': 71.23}  # [N*m/rad]
+        damping = {'j': 1.86}     # [N*m*s/rad]
 
 
 
@@ -146,8 +146,8 @@ class SBActiveSpineRobotCfg(BaseConfig):
         latency =False
         alpha_latency =0.43
         randomize_PD = False
-        stiffness_range = [20., 35.] # [N*m/rad]
-        damping_range = [0.5, 1.2]     # [N*m*s/r
+        stiffness_range = [30., 100.] # [N*m/rad]
+        damping_range = [0.5, 2.0]     # [N*m*s/r
         randomize_friction = True
         friction_range = [0.3,1.0]
         randomize_base_mass = True 
@@ -164,6 +164,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
             linear_velocity = -2.0
             angular_velocity = -0.1
             energy = -0.001
+            feet_contact_forces = -0.01
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
