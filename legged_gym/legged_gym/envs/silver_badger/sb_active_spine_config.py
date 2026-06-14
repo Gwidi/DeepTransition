@@ -26,9 +26,11 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 66 # 136 with active spine
-        num_privileged_obs = 70 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 10 # Amplitudes, frequencies and offsets for 4 legs
+        num_observations = 65
+        num_privileged_obs = 69
+        # Five CPG amplitudes (four legs + spine), followed by four leg frequencies.
+        # The phase-locked spine inherits the selected leg frequency.
+        num_actions = 9
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -110,6 +112,17 @@ class SBActiveSpineRobotCfg(BaseConfig):
         decimation = 10
         stiffness = {'j': 71.23}  # [N*m/rad]
         damping = {'j': 1.86}     # [N*m*s/rad]
+
+        # Spine CPG/controller options:
+        # - "uncoupled": previous behavior; the policy controls an independent spine oscillator.
+        # - "phase_locked": spine phase is anchored to a leg phase reference while amplitude
+        #   can still come from the policy. Useful for testing whether coordination helps.
+        spine_phase_mode = "phase_locked"  # uncouple or phase_locked
+        spine_phase_source = "rr"  # fl, fr, rl, rr, front_mean, rear_mean, left_diagonal, right_diagonal, all_mean
+        spine_phase_offset = 0.0
+        max_spine_angle = 0.2617993877991494  # 15 deg [rad]
+        spine_amplitude_mode = "policy"  # policy or fixed
+        spine_fixed_amplitude = 0.17453292519943295  # 10 deg [rad]
 
 
 
@@ -253,7 +266,7 @@ class SBActiveSpineRobotCfgPPO(BaseConfig):
         max_iterations = 1500 # number of policy updates
         # logging
         save_interval = 1000 # check for potential saves every this many iterations
-        experiment_name = 'silver_badger_active_spine' 
+        experiment_name = 'silver_badger_active_spine_phase_locked_9act'
         run_name = ''
         # load and resume
         resume = False
@@ -263,5 +276,3 @@ class SBActiveSpineRobotCfgPPO(BaseConfig):
         wandb_project ='silver_badger_active_spine'
         wandb_entity = 'cpg_put'
 
-
-  

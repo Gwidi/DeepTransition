@@ -49,8 +49,14 @@ class CPG_RL():
           rl_task_string=None,
           mu_low = 1.0,
           mu_up = 2.0,
-          max_step_len = 0.2,
+          max_step_len = 0.04,
           num_CPGs = 4,
+          spine_phase_mode = "phase_locked",
+          spine_phase_source = "rr",
+          spine_phase_offset = 0.0,
+          max_spine_angle = 15.0 * np.pi / 180.0,
+          spine_amplitude_mode = "policy",
+          spine_fixed_amplitude = 10.0 * np.pi / 180.0,
         ):
         self._rl_task_string = rl_task_string
         #global device
@@ -76,6 +82,12 @@ class CPG_RL():
         self._couple = couple
         self._coupling_strength = coupling_strength
         self._dt = time_step
+        self._spine_phase_mode = spine_phase_mode
+        self._spine_phase_source = spine_phase_source
+        self._spine_phase_offset = spine_phase_offset
+        self._max_spine_angle = max_spine_angle
+        self._spine_amplitude_mode = spine_amplitude_mode
+        self._spine_fixed_amplitude = spine_fixed_amplitude
         self._set_gait(gait)
         self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
 
@@ -89,10 +101,10 @@ class CPG_RL():
 
         self._des_step_len = des_step_len
 
-        self.robot_height_range = [0.22, 0.28] # min and max height of the CPG oscillation center
-        self.ground_clearance_range = [0.04, 0.09]
-        self.ground_penetration_range = [0.0, 0.015]
-        self.offset_x_range = [-0.08, 0.02]
+        self.robot_height_range = [0.26, 0.285] # min and max height of the CPG oscillation center
+        self.ground_clearance_range = [0.035, 0.055]
+        self.ground_penetration_range = [0.002, 0.006]
+        self.offset_x_range = [-0.035, -0.005]
 
     def reset(self,env_ids):
         self._mu[env_ids,:] = 0
@@ -252,6 +264,46 @@ class CPG_RL():
         
         return gait_5x5
 
+    def _spine_phase_source_indices(self):
+        source_to_indices = {
+            "fl": [0],
+            "fr": [1],
+            "rl": [2],
+            "rr": [3],
+            "front_mean": [0, 1],
+            "rear_mean": [2, 3],
+            "left_diagonal": [0, 3],   # FL + RR
+            "right_diagonal": [1, 2],  # FR + RL
+            "all_mean": [0, 1, 2, 3],
+        }
+        if self._spine_phase_source not in source_to_indices:
+            raise ValueError(f"Unsupported spine_phase_source: {self._spine_phase_source}")
+        return source_to_indices[self._spine_phase_source]
+
+    def _circular_mean_phase(self, phases):
+        return torch.atan2(torch.mean(torch.sin(phases), dim=1), torch.mean(torch.cos(phases), dim=1))
+
+    def _apply_spine_phase_controller(self, X_dot):
+        if not ("SPINE" in self._rl_task_string and self.num_CPGs >= 5):
+            return
+        if self._spine_phase_mode == "uncoupled":
+            return
+        if self._spine_phase_mode != "phase_locked":
+            raise ValueError(f"Unsupported spine_phase_mode: {self._spine_phase_mode}")
+
+        source_indices = self._spine_phase_source_indices()
+        source_phases = self.X[:, 1, source_indices]
+        source_phase_vels = X_dot[:, 1, source_indices]
+        self.X[:, 1, 4] = torch.remainder(
+            self._circular_mean_phase(source_phases) + self._spine_phase_offset,
+            2 * np.pi,
+        )
+        X_dot[:, 1, 4] = torch.mean(source_phase_vels, dim=1)
+
+    def _phase_locked_spine_frequency(self, leg_frequencies):
+        source_indices = self._spine_phase_source_indices()
+        return torch.mean(leg_frequencies[:, source_indices], dim=1, keepdim=True)
+
 
     def update(self):
         """ Update oscillator states. """
@@ -282,13 +334,35 @@ class CPG_RL():
         MU_LOW = self.mu_low[0]
         MU_UPP = self.mu_up[0]
         MAX_STEP_LEN = self.max_step_len[0]
-        MAX_SPINE_ANGLE = torch.tensor(15.0 * np.pi / 180) # 15° in radians
-  
         device = self._device 
+        MAX_SPINE_ANGLE = torch.tensor(self._max_spine_angle, device=device) # radians
         a = torch.clip(actions, -1, 1)
         if "SPINE" in self._rl_task_string:
             self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
-            self._omega_residuals = self._scale_helper(a[:,5:10],frequency_low,frequency_high) * (2*np.pi)
+            if self._spine_phase_mode == "phase_locked":
+                if a.shape[1] != 9:
+                    raise ValueError(
+                        f"Phase-locked spine expects 9 actions "
+                        f"(5 amplitudes + 4 leg frequencies), got {a.shape[1]}"
+                    )
+                leg_frequencies = self._scale_helper(
+                    a[:, 5:9],
+                    frequency_low[:, :4],
+                    frequency_high[:, :4],
+                ) * (2 * np.pi)
+                spine_frequency = self._phase_locked_spine_frequency(leg_frequencies)
+                self._omega_residuals = torch.cat((leg_frequencies, spine_frequency), dim=1)
+            else:
+                if a.shape[1] != 10:
+                    raise ValueError(
+                        f"Uncoupled spine expects 10 actions "
+                        f"(5 amplitudes + 5 frequencies), got {a.shape[1]}"
+                    )
+                self._omega_residuals = self._scale_helper(
+                    a[:, 5:10],
+                    frequency_low,
+                    frequency_high,
+                ) * (2 * np.pi)
         else:
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high) * (2*np.pi)
@@ -300,8 +374,13 @@ class CPG_RL():
         x = MAX_STEP_LEN * (x - MU_LOW) / (MU_UPP - MU_LOW)
         
         if "SPINE" in self._rl_task_string: 
-            sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP)
-            sp = MAX_SPINE_ANGLE * (sp - MU_LOW) / (MU_UPP - MU_LOW) 
+            if self._spine_amplitude_mode == "fixed":
+                sp = torch.ones(self.num_envs, dtype=torch.float, device=device) * self._spine_fixed_amplitude
+            elif self._spine_amplitude_mode == "policy":
+                sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP)
+                sp = MAX_SPINE_ANGLE * (sp - MU_LOW) / (MU_UPP - MU_LOW)
+            else:
+                raise ValueError(f"Unsupported spine_amplitude_mode: {self._spine_amplitude_mode}")
         
             
  
@@ -344,6 +423,7 @@ class CPG_RL():
             self.X_dot = X_dot
             self.d2X = d2X 
             self.X[:,1,:] = torch.remainder(self.X[:,1,:], (2*np.pi))
+            self._apply_spine_phase_controller(X_dot)
 
     # def compute_inverse_kinematics(self,robot,legID, x, y, z):
     #     z = -0.35
