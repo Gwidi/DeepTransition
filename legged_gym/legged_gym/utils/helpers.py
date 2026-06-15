@@ -114,6 +114,8 @@ def update_cfg_from_args(env_cfg, cfg_train, args):
             cfg_train.runner.experiment_name = args.experiment_name
         if args.run_name is not None:
             cfg_train.runner.run_name = args.run_name
+        if args.wandb_notes is not None:
+            cfg_train.runner.wandb_notes = args.wandb_notes
         if args.load_run is not None:
             cfg_train.runner.load_run = args.load_run
         if args.checkpoint is not None:
@@ -127,6 +129,7 @@ def get_args():
         {"name": "--resume", "action": "store_true", "default": False,  "help": "Resume training from a checkpoint"},
         {"name": "--experiment_name", "type": str,  "help": "Name of the experiment to run or load. Overrides config file if provided."},
         {"name": "--run_name", "type": str,  "help": "Name of the run. Overrides config file if provided."},
+        {"name": "--wandb_notes", "type": str, "help": "Notes to attach to the Weights & Biases run."},
         {"name": "--load_run", "type": str,  "help": "Name of the run to load when resume=True. If -1: will load the last run. Overrides config file if provided."},
         {"name": "--checkpoint", "type": int,  "help": "Saved model checkpoint number. If -1: will load the last checkpoint. Overrides config file if provided."},
         

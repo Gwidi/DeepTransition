@@ -89,7 +89,13 @@ class OnPolicyRunner:
         except Exception:
             env_cfg_dict = {}
         # initialize writer
-        wandb.init(project=self.cfg["wandb_project"], entity=self.cfg["wandb_entity"], sync_tensorboard=True, config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict})
+        wandb.init(
+            project=self.cfg["wandb_project"],
+            entity=self.cfg["wandb_entity"],
+            notes=self.cfg.get("wandb_notes"),
+            sync_tensorboard=True,
+            config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict},
+        )
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
