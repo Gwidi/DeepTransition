@@ -29,10 +29,14 @@ import torch
 from isaacgym.torch_utils import *
 
 class CPG_RL():
-    """ CPG-RL Implementation. 
-    IsaacGym order is FL, FR, RL, RR (alphabetical)
+    """CPG-RL implementation.
+
+    Leg oscillators and gait matrices use the physical order FL, FR, RL, RR.
+    The IK equations use a separate historical ID convention.
     """
-    LEG_INDICES = np.array([1,0,3,2])
+    LEG_NAMES = ("fl", "fr", "rl", "rr")
+    IK_LEG_ID = {"fr": 0, "fl": 1, "rr": 2, "rl": 3}
+    LEG_LATERAL_SIGN = {"fl": 1.0, "fr": -1.0, "rl": 1.0, "rr": -1.0}
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi, 
@@ -90,6 +94,16 @@ class CPG_RL():
         self._spine_fixed_amplitude = spine_fixed_amplitude
         self._set_gait(gait)
         self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
+        self._coupling_mask = torch.ones(
+            self.num_CPGs,
+            self.num_CPGs,
+            dtype=torch.float,
+            device=self._device,
+            requires_grad=False,
+        )
+        if "SPINE" in self._rl_task_string and self.num_CPGs >= 5:
+            self._coupling_mask[4, :] = 0.0
+            self._coupling_mask[:, 4] = 0.0
 
         self.gait_names = ["TROT", "WALK", "PACE", "BOUND", "PRONK", "CANTER", "TRANSVERSE_GALLOP", "ROTARY_GALLOP", "AMBLE"]
         initial_gait_idx = self.gait_names.index(gait) if gait in self.gait_names else 0
@@ -250,17 +264,15 @@ class CPG_RL():
         
     def _expand_gait_with_spine(self, gait_4x4):
         """Expand a 4x4 leg coupling matrix to 5x5 by adding spine (5th oscillator).
-        
-        W tej wersji usuwamy sztywne sprzężenie kręgosłupa. Agent (RL) sam
-        nauczy się synchronizować kręgosłup za pomocą omega_residuals.
+
+        The coupling mask disables all spine-leg terms. Zero entries alone are
+        insufficient because they represent a desired zero phase difference.
         """
         device = self._device
         gait_5x5 = torch.zeros(5, 5, dtype=torch.float, device=device, requires_grad=False)
         
         # Copy the original 4x4 leg coupling
         gait_5x5[:4, :4] = gait_4x4
-        
-        # Kręgosłup nie jest sprzężony z nogami - wiersz 4 i kolumna 4 zostają zerami.
         
         return gait_5x5
 
@@ -416,7 +428,17 @@ class CPG_RL():
             coupling_effect = torch.zeros_like(self._omega_residuals)
             if self._couple:
                 for i in range(self.num_CPGs):
-                    coupling_effect[:,i] += torch.sum(   X[:,0,:] * self._coupling_strength * torch.sin(X[:,1,:] - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1) - self.PHI_batch[:,i,:]) , 1)
+                    coupling_effect[:,i] += torch.sum(
+                        X[:,0,:]
+                        * self._coupling_strength
+                        * self._coupling_mask[i, :]
+                        * torch.sin(
+                            X[:,1,:]
+                            - torch.remainder(self.X[:,1,i], (2*np.pi)).unsqueeze(1)
+                            - self.PHI_batch[:,i,:]
+                        ),
+                        1,
+                    )
             X_dot[:,1,:] = self._omega_residuals + coupling_effect
             X_dot[:,0,:] = X_dot_prev[:,0,:] + (d2X_prev[:,0,:] + d2X[:,0,:]) * dt / 2
             self.X = X + (X_dot_prev + X_dot) * dt / 2 

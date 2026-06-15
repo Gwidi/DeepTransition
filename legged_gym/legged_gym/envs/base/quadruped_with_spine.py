@@ -467,33 +467,20 @@ class QuadrupedWithSpine(BaseTask):
         if "CPG" in control_type:
             des_joint_pos = torch.zeros_like(self.torques,device=self.device)
             xs,ys,zs, sp = self._cpg.get_CPG_RL_actions(actions_scaled,self.frequency_high,self.frequency_low,normal_forces)
-            sideSign = np.array([-1,1,-1,1]) 
 
             foot_y = torch.ones(self.num_envs,device=self.device,requires_grad=False) * self.cfg.asset.hip_link_length
-            LEG_INDICES = np.array([1,0,3,2])
 
             des_joint_pos[:, self.spine_idx] = sp  # spine pitch
-            for ig_idx,i in enumerate(LEG_INDICES):
-                x = xs[:,i]
-                z = zs[:,i]
-                y = sideSign[i] * foot_y  + ys[:,i]
-                robot_length=self.cfg.asset
-                if ig_idx == 0:    # FL 
-                    start_idx = 0  # index 0, 1, 2
-                elif ig_idx == 1:  # FR 
-                    start_idx = 3  # index 3, 4, 5
-                elif ig_idx == 2:  # RL  (after spine)
-                    start_idx = 7  # index 7, 8, 9
-                elif ig_idx == 3:  # RR 
-                    start_idx = 10  # index 10, 11, 12
-                des_joint_pos[:, start_idx:start_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
-            # else:
-            #     for ig_idx,i in enumerate(LEG_INDICES):
-            #         x = xs[:,i]
-            #         z = zs[:,i]
-            #         y = sideSign[i] * foot_y  + ys[:,i]
-            #         robot_length=self.cfg.asset
-            #         des_joint_pos[:, 3*ig_idx:3*ig_idx+3] = self._cpg.compute_inverse_kinematics(robot_length,i,x,y,z)
+            for cpg_idx, leg_name in enumerate(CPG_RL.LEG_NAMES):
+                ik_leg_id = CPG_RL.IK_LEG_ID[leg_name]
+                lateral_sign = CPG_RL.LEG_LATERAL_SIGN[leg_name]
+                x = xs[:, cpg_idx]
+                y = lateral_sign * foot_y + ys[:, cpg_idx]
+                z = zs[:, cpg_idx]
+                joint_targets = self._cpg.compute_inverse_kinematics(
+                    self.cfg.asset, ik_leg_id, x, y, z
+                )
+                des_joint_pos[:, self.leg_dof_indices[leg_name]] = joint_targets
             
             hip_roll_indices = [0, 3, 7, 10]  # FL, FR, RL, RR hip_roll
             hip_roll_offset = torch.tensor([0.1, -0.1, -0.1, 0.1], device=self.device)  # FL, FR, RL, RR
@@ -686,6 +673,19 @@ class QuadrupedWithSpine(BaseTask):
             name = self.dof_names[i]
             angle = self.cfg.init_state.default_joint_angles[name]
             self.default_dof_pos[i] = angle
+
+        self.leg_dof_indices = {}
+        for leg_name in CPG_RL.LEG_NAMES:
+            joint_names = tuple(f"{leg_name}_j{joint_idx}" for joint_idx in range(3))
+            missing = [name for name in joint_names if name not in self.dof_names]
+            if missing:
+                raise RuntimeError(
+                    f"Missing leg joints for {leg_name.upper()}: {missing}. "
+                    f"Loaded DOFs: {self.dof_names}"
+                )
+            self.leg_dof_indices[leg_name] = [
+                self.dof_names.index(name) for name in joint_names
+            ]
         
 
         # Set PD gains based on the cfg values 
@@ -839,6 +839,7 @@ class QuadrupedWithSpine(BaseTask):
         self.num_bodies = len(body_names)
         self.num_dofs = len(self.dof_names)
         feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
+        self.feet_names = feet_names
         
         penalized_contact_names = []
         for name in self.cfg.asset.penalize_contacts_on:
