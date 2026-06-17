@@ -226,9 +226,11 @@ class QuadrupedWithSpine(BaseTask):
             adds each terms to the episode sums and to the total reward
         """
         self.rew_buf[:] = 0.
+        self.reward_terms = {}
         for i in range(len(self.reward_functions)):
             name = self.reward_names[i]
             rew = self.reward_functions[i]() * self.reward_scales[name]
+            self.reward_terms[name] = rew
             self.rew_buf += rew
             self.episode_sums[name] += rew
         if self.cfg.rewards.only_positive_rewards:
@@ -236,6 +238,7 @@ class QuadrupedWithSpine(BaseTask):
         # add termination reward after clipping
         if "termination" in self.reward_scales:
             rew = self._reward_termination() * self.reward_scales["termination"]
+            self.reward_terms["termination"] = rew
             self.rew_buf += rew
             self.episode_sums["termination"] += rew
 
@@ -497,7 +500,8 @@ class QuadrupedWithSpine(BaseTask):
              
         else:
             raise NameError(f"Unknown controller type: {control_type}")
-        
+
+        self.unclipped_torques = torques
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
 
     def _reset_dofs(self, env_ids):
@@ -612,6 +616,7 @@ class QuadrupedWithSpine(BaseTask):
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1)) # [0,0,-1] ? 
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_dofs, dtype=torch.float, device=self.device, requires_grad=False) # num_dofs motors... num_actions will changes based on space 
+        self.unclipped_torques = torch.zeros_like(self.torques)
         self.dof_des_pos =torch.zeros(self.num_envs, self.num_dofs, dtype=torch.float, device=self.device, requires_grad=False) # num_dofs motors... num_actions will changes based on space 
         if(self.cfg.domain_rand.latency):
             self.torques_prev = torch.zeros(self.num_envs, self.num_dofs, dtype=torch.float, device=self.device, requires_grad=False) # num_dofs motors... num_actions will change based on space        
@@ -1014,6 +1019,24 @@ class QuadrupedWithSpine(BaseTask):
     def _reward_energy(self):
         # Penalize energy
         return torch.sum(torch.abs(self.torques*self.dof_vel), dim=1)
+
+    def _reward_torque_saturation(self):
+        utilization = torch.abs(self.unclipped_torques) / torch.clamp(
+            self.torque_limits, min=1e-6
+        )
+        excess = torch.clamp(
+            utilization - self.cfg.rewards.soft_torque_limit, min=0.0
+        )
+        return torch.sum(torch.square(excess), dim=1)
+
+    def _reward_dof_velocity_limits(self):
+        utilization = torch.abs(self.dof_vel) / torch.clamp(
+            self.dof_vel_limits, min=1e-6
+        )
+        excess = torch.clamp(
+            utilization - self.cfg.rewards.soft_dof_vel_limit, min=0.0
+        )
+        return torch.sum(torch.square(excess), dim=1)
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)

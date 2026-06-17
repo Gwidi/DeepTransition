@@ -179,6 +179,8 @@ class SBActiveSpineRobotCfg(BaseConfig):
             angular_velocity = -0.1
             energy = -0.001
             feet_contact_forces = -0.01
+            torque_saturation = 0.0
+            dof_velocity_limits = 0.0
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
@@ -276,4 +278,3 @@ class SBActiveSpineRobotCfgPPO(BaseConfig):
         resume_path = None # updated from load_run and chkpt
         wandb_project ='silver_badger_active_spine'
         wandb_entity = 'cpg_put'
-

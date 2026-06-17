@@ -109,6 +109,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
     class control:
         control_type = 'CPG_OFFSETX'
         action_scale = 1.0
+        max_step_len = 0.065  # [m], nominal speed envelope: 4 * step length * frequency
 
         decimation = 10
         stiffness = {'j': 71.23}  # [N*m/rad]
@@ -171,12 +172,14 @@ class SBRigidSpineRobotCfg(BaseConfig):
             energy = -0.001
             #locomotion_distance = 800.7230
             feet_contact_forces = -0.01
+            torque_saturation = 0.0
+            dof_velocity_limits = 0.0
             
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
-        soft_dof_vel_limit = 1.
-        soft_torque_limit = 1.
+        soft_dof_vel_limit = 0.9
+        soft_torque_limit = 0.85
         max_contact_force = 180. # forces above this value are penalized
         soft_dof_pos_limit = 0.9
         base_height_target = 0.32 #25
