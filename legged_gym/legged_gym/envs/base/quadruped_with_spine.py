@@ -665,6 +665,7 @@ class QuadrupedWithSpine(BaseTask):
                 max_spine_angle=getattr(self.cfg.control, "max_spine_angle", 15.0 * np.pi / 180.0),
                 spine_amplitude_mode=getattr(self.cfg.control, "spine_amplitude_mode", "policy"),
                 spine_fixed_amplitude=getattr(self.cfg.control, "spine_fixed_amplitude", 10.0 * np.pi / 180.0),
+                spine_control_mode=getattr(self.cfg.control, "spine_control_mode", "cpg"),
             )
 
         # joint positions offsets and PD gains

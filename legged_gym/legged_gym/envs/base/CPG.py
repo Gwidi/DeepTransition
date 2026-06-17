@@ -53,7 +53,7 @@ class CPG_RL():
           rl_task_string=None,
           mu_low = 1.0,
           mu_up = 2.0,
-          max_step_len = 0.04,
+          max_step_len = 0.16,
           num_CPGs = 4,
           spine_phase_mode = "phase_locked",
           spine_phase_source = "rr",
@@ -61,6 +61,7 @@ class CPG_RL():
           max_spine_angle = 15.0 * np.pi / 180.0,
           spine_amplitude_mode = "policy",
           spine_fixed_amplitude = 10.0 * np.pi / 180.0,
+          spine_control_mode = "cpg",
         ):
         self._rl_task_string = rl_task_string
         #global device
@@ -92,6 +93,7 @@ class CPG_RL():
         self._max_spine_angle = max_spine_angle
         self._spine_amplitude_mode = spine_amplitude_mode
         self._spine_fixed_amplitude = spine_fixed_amplitude
+        self._spine_control_mode = spine_control_mode
         self._set_gait(gait)
         self.PHI_batch = self.PHI.unsqueeze(0).repeat(self.num_envs, 1, 1)
         self._coupling_mask = torch.ones(
@@ -350,8 +352,25 @@ class CPG_RL():
         MAX_SPINE_ANGLE = torch.tensor(self._max_spine_angle, device=device) # radians
         a = torch.clip(actions, -1, 1)
         if "SPINE" in self._rl_task_string:
-            self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
-            if self._spine_phase_mode == "phase_locked":
+            if self._spine_control_mode == "direct":
+                if a.shape[1] != 9:
+                    raise ValueError(
+                        f"Direct spine expects 9 actions "
+                        f"(4 leg amplitudes + direct spine angle + 4 leg frequencies), got {a.shape[1]}"
+                    )
+                leg_mu = self._scale_helper(a[:, :4], MU_LOW**2, MU_UPP**2)
+                spine_mu = torch.ones(a.shape[0], 1, dtype=torch.float, device=device) * MU_LOW**2
+                self._mu = torch.cat((leg_mu, spine_mu), dim=1)
+                leg_frequencies = self._scale_helper(
+                    a[:, 5:9],
+                    frequency_low[:, :4],
+                    frequency_high[:, :4],
+                ) * (2 * np.pi)
+                spine_frequency = torch.mean(leg_frequencies, dim=1, keepdim=True)
+                self._omega_residuals = torch.cat((leg_frequencies, spine_frequency), dim=1)
+            else:
+                self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
+            if self._spine_control_mode != "direct" and self._spine_phase_mode == "phase_locked":
                 if a.shape[1] != 9:
                     raise ValueError(
                         f"Phase-locked spine expects 9 actions "
@@ -364,7 +383,7 @@ class CPG_RL():
                 ) * (2 * np.pi)
                 spine_frequency = self._phase_locked_spine_frequency(leg_frequencies)
                 self._omega_residuals = torch.cat((leg_frequencies, spine_frequency), dim=1)
-            else:
+            elif self._spine_control_mode != "direct":
                 if a.shape[1] != 10:
                     raise ValueError(
                         f"Uncoupled spine expects 10 actions "
@@ -386,7 +405,9 @@ class CPG_RL():
         x = MAX_STEP_LEN * (x - MU_LOW) / (MU_UPP - MU_LOW)
         
         if "SPINE" in self._rl_task_string: 
-            if self._spine_amplitude_mode == "fixed":
+            if self._spine_control_mode == "direct":
+                sp = torch.clip(a[:, 4], -1.0, 1.0) * MAX_SPINE_ANGLE
+            elif self._spine_amplitude_mode == "fixed":
                 sp = torch.ones(self.num_envs, dtype=torch.float, device=device) * self._spine_fixed_amplitude
             elif self._spine_amplitude_mode == "policy":
                 sp = torch.clip(self.X[:,0,4], MU_LOW, MU_UPP)
@@ -405,10 +426,10 @@ class CPG_RL():
         z = torch.where(torch.sin(self.X[:,1,:4]) > 0, 
                         -self._robot_height.unsqueeze(1) + self._ground_clearance.unsqueeze(1)   * torch.sin(self.X[:,1,:4]),
                         -self._robot_height.unsqueeze(1) + self._ground_penetration.unsqueeze(1) * torch.sin(self.X[:,1,:4]))
-        if "SPINE" in self._rl_task_string:
-            sp = sp * torch.sin(self.X[:,1,4])
-        else: 
+        if "SPINE" not in self._rl_task_string:
             sp = 0.0
+        elif self._spine_control_mode != "direct":
+            sp = sp * torch.sin(self.X[:,1,4])
     
         return x, y, z, sp
 

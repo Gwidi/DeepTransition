@@ -117,12 +117,13 @@ class SBActiveSpineRobotCfg(BaseConfig):
         # - "uncoupled": previous behavior; the policy controls an independent spine oscillator.
         # - "phase_locked": spine phase is anchored to a leg phase reference while amplitude
         #   can still come from the policy. Useful for testing whether coordination helps.
-        spine_phase_mode = "phase_locked"  # uncouple or phase_locked
+        spine_phase_mode = "phase_locked"  # uncoupled or phase_locked
         spine_phase_source = "rr"  # fl, fr, rl, rr, front_mean, rear_mean, left_diagonal, right_diagonal, all_mean
         spine_phase_offset = 0.0
         max_spine_angle = 0.2617993877991494  # 15 deg [rad]
         spine_amplitude_mode = "policy"  # policy or fixed
         spine_fixed_amplitude = 0.17453292519943295  # 10 deg [rad]
+        spine_control_mode = "cpg"  # cpg or direct
 
 
 
@@ -181,8 +182,8 @@ class SBActiveSpineRobotCfg(BaseConfig):
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
-        soft_dof_vel_limit = 1.
-        soft_torque_limit = 1.
+        soft_dof_vel_limit = 0.9
+        soft_torque_limit = 0.85
         max_contact_force = 180. # forces above this value are penalized
         soft_dof_pos_limit = 0.9
         base_height_target = 0.32 #25
