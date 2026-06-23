@@ -30,6 +30,7 @@
 
 import time
 import os
+import inspect
 from collections import deque
 import statistics
 
@@ -77,11 +78,30 @@ class OnPolicyRunner:
         # Log
         self.log_dir = log_dir
         self.writer = None
+        self._saved_wandb_source_files = False
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
 
         _, _ = self.env.reset()
+
+    def _save_wandb_source_files(self):
+        if wandb.run is None or self._saved_wandb_source_files:
+            return
+
+        source_paths = []
+        if hasattr(self.env, "_cpg"):
+            source_path = inspect.getsourcefile(self.env._cpg.__class__)
+            if source_path is not None:
+                source_paths.append(source_path)
+
+        for source_path in source_paths:
+            source_path = os.path.abspath(source_path)
+            if os.path.isfile(source_path):
+                base_path = os.path.commonpath([os.getcwd(), source_path])
+                wandb.save(source_path, base_path=base_path, policy="now")
+
+        self._saved_wandb_source_files = True
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         try: 
@@ -96,6 +116,7 @@ class OnPolicyRunner:
             sync_tensorboard=True,
             config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict},
         )
+        self._save_wandb_source_files()
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
@@ -236,7 +257,7 @@ class OnPolicyRunner:
             wandb.save(path, base_path=self.log_dir, policy="now")
 
     def load(self, path, load_optimizer=True):
-        loaded_dict = torch.load(path)
+        loaded_dict = torch.load(path, map_location=self.device)
         self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
