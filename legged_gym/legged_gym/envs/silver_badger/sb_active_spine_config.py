@@ -26,8 +26,8 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 65
-        num_privileged_obs = 69
+        num_observations = 75
+        num_privileged_obs = 82
         # Five CPG amplitudes (four legs + spine), followed by four leg frequencies.
         # The phase-locked spine inherits the selected leg frequency.
         num_actions = 9

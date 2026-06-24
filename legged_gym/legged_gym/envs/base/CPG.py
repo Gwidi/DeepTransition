@@ -39,12 +39,12 @@ class CPG_RL():
     LEG_LATERAL_SIGN = {"fl": 1.0, "fr": -1.0, "rl": 1.0, "rr": -1.0}
     def __init__(self,
           omega_swing=8*2*np.pi,
-          omega_stance=2*2*np.pi, 
+          omega_stance=2*2*np.pi,
           gait="TROT",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.28, 
+          robot_height=0.28,
           des_step_len=0.05,
           ground_clearance=0.05,
           ground_penetration=0.015,
@@ -76,7 +76,7 @@ class CPG_RL():
         self._ground_clearance = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_clearance
         self._ground_penetration = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_penetration
         if "OFFSETX" in rl_task_string:
-            self._offset_x= torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
+            self._offset_x= torch.zeros(num_envs,1,dtype=torch.float, device=device, requires_grad=False)
             self._offset_z = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
         self.y = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
         self.mu_low= mu_low,
@@ -137,7 +137,7 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 4), device=self._device)
+        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 1), device=self._device)
 
  
 
