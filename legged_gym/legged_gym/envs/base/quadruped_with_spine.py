@@ -252,7 +252,6 @@ class QuadrupedWithSpine(BaseTask):
             self.dof_pos[:, 6] = self.dof_vel[:, 6] = 0.0
 
         if "CPG" in self.cfg.control.control_type:
-            cpg_context_obs = self._get_cpg_context_obs()
             self.obs_buf = torch.cat(( #self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
@@ -265,7 +264,6 @@ class QuadrupedWithSpine(BaseTask):
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
                                     (self._cpg.X_dot[:,1,:] - 15) * 1/30,
-                                    cpg_context_obs,
                                     ),dim=-1)
             self.privileged_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
@@ -279,7 +277,6 @@ class QuadrupedWithSpine(BaseTask):
                                     (self._cpg.X[:,1,:] - np.pi) * 1/np.pi,
                                     self._cpg.X_dot[:,0,:] * 1/30, 
                                     (self._cpg.X_dot[:,1,:] - 15) * 1/30,
-                                    cpg_context_obs,
                                     ),dim=-1)
             
         if self.cfg.domain_rand.randomize_lag_timesteps:
@@ -303,36 +300,6 @@ class QuadrupedWithSpine(BaseTask):
            self._save_arr_idx += 1
            if(self._save_arr_idx==723):
                 np.savetxt('obs_states.txt', self._save_arr,fmt='%1.3f')
-
-    def _normalize_cpg_param(self, value, value_range):
-        low = torch.tensor(value_range[0], dtype=torch.float, device=self.device)
-        high = torch.tensor(value_range[1], dtype=torch.float, device=self.device)
-        half_range = torch.clamp((high - low) * 0.5, min=1e-6)
-        return torch.clamp((value - (low + high) * 0.5) / half_range, -1.0, 1.0)
-
-    def _get_cpg_context_obs(self):
-        gait_one_hot = torch.zeros(
-            self.num_envs,
-            len(self._cpg.gait_names),
-            dtype=torch.float,
-            device=self.device,
-            requires_grad=False,
-        )
-        gait_one_hot.scatter_(1, self._cpg.current_gait_indices.unsqueeze(1), 1.0)
-
-        if hasattr(self._cpg, "_offset_x"):
-            offset_x_obs = self._normalize_cpg_param(self._cpg._offset_x, self._cpg.offset_x_range)
-        else:
-            offset_x_obs = torch.zeros(self.num_envs, 1, dtype=torch.float, device=self.device, requires_grad=False)
-
-        cpg_params = torch.cat((
-            self._normalize_cpg_param(self._cpg._robot_height, self._cpg.robot_height_range).unsqueeze(1),
-            self._normalize_cpg_param(self._cpg._ground_clearance, self._cpg.ground_clearance_range).unsqueeze(1),
-            self._normalize_cpg_param(self._cpg._ground_penetration, self._cpg.ground_penetration_range).unsqueeze(1),
-            offset_x_obs,
-        ), dim=-1)
-
-        return torch.cat((gait_one_hot, cpg_params), dim=-1)
 
     def create_sim(self):
         """ Creates simulation, terrain and evironments

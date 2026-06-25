@@ -24,9 +24,9 @@ class SBSpineRigidCfgPPO(SBRigidSpineRobotCfgPPO):
 
 class SBSpinePhaseLockedBaseCfg(SBActiveSpineRobotCfg):
     class env(SBActiveSpineRobotCfg.env):
-        num_observations = 75
-        num_privileged_obs = 82
-        num_actions = 9
+        num_observations = 66
+        num_privileged_obs = 73
+        num_actions = 13
 
     class control(SBActiveSpineRobotCfg.control):
         spine_control_mode = "cpg"
@@ -73,9 +73,9 @@ class SBSpinePhaseLockedPiCfgPPO(SBSpinePhaseLockedBaseCfgPPO):
 
 class SBSpineUncoupledCfg(SBActiveSpineRobotCfg):
     class env(SBActiveSpineRobotCfg.env):
-        num_observations = 76
-        num_privileged_obs = 83
-        num_actions = 10
+        num_observations = 67
+        num_privileged_obs = 74
+        num_actions = 14
 
     class control(SBActiveSpineRobotCfg.control):
         spine_control_mode = "cpg"
@@ -91,9 +91,9 @@ class SBSpineUncoupledCfgPPO(SBActiveSpineRobotCfgPPO):
 
 class SBSpineDirectCfg(SBActiveSpineRobotCfg):
     class env(SBActiveSpineRobotCfg.env):
-        num_observations = 75
-        num_privileged_obs = 82
-        num_actions = 9
+        num_observations = 66
+        num_privileged_obs = 73
+        num_actions = 13
 
     class control(SBActiveSpineRobotCfg.control):
         spine_control_mode = "direct"

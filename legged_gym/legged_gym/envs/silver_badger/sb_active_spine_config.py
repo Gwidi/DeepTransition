@@ -26,11 +26,12 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBActiveSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 75
-        num_privileged_obs = 82
-        # Five CPG amplitudes (four legs + spine), followed by four leg frequencies.
-        # The phase-locked spine inherits the selected leg frequency.
-        num_actions = 9
+        num_observations = 66
+        num_privileged_obs = 73
+        # Five CPG amplitudes (four legs + spine), followed by four leg frequencies
+        # and four per-leg x-offset actions. The phase-locked spine inherits the
+        # selected leg frequency.
+        num_actions = 13
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -106,7 +107,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX_SPINE'
+        control_type = 'CPG_OFFSETX_ACTION_SPINE'
         action_scale = 1.0
 
         decimation = 10

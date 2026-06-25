@@ -40,11 +40,11 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi,
-          gait="TROT",
+          gait="BOUND",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
-          robot_height=0.28,
+          robot_height=0.35,
           des_step_len=0.05,
           ground_clearance=0.05,
           ground_penetration=0.015,
@@ -75,8 +75,9 @@ class CPG_RL():
         self._robot_height = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * robot_height
         self._ground_clearance = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_clearance
         self._ground_penetration = torch.ones(num_envs,dtype=torch.float, device=device, requires_grad=False) * ground_penetration
+        self._offset_x_from_actions = "OFFSETX_ACTION" in rl_task_string
         if "OFFSETX" in rl_task_string:
-            self._offset_x= torch.zeros(num_envs,1,dtype=torch.float, device=device, requires_grad=False)
+            self._offset_x= torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
             self._offset_z = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
         self.y = torch.zeros(num_envs,4,dtype=torch.float, device=device, requires_grad=False)
         self.mu_low= mu_low,
@@ -137,7 +138,12 @@ class CPG_RL():
         self._robot_height[env_ids] = torch_rand_float(self.robot_height_range[0], self.robot_height_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_clearance[env_ids] = torch_rand_float(self.ground_clearance_range[0], self.ground_clearance_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
         self._ground_penetration[env_ids] = torch_rand_float(self.ground_penetration_range[0], self.ground_penetration_range[1], (len(env_ids), 1), device=self._device).squeeze(1)
-        self._offset_x[env_ids] = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 1), device=self._device)
+        if hasattr(self, "_offset_x"):
+            if self._offset_x_from_actions:
+                self._offset_x[env_ids] = 0.5 * (self.offset_x_range[0] + self.offset_x_range[1])
+            else:
+                offset_x = torch_rand_float(self.offset_x_range[0], self.offset_x_range[1], (len(env_ids), 1), device=self._device)
+                self._offset_x[env_ids] = offset_x.repeat(1, 4)
 
  
 
@@ -343,6 +349,13 @@ class CPG_RL():
         new_a = torch.clip(new_a, lower_lim, upper_lim)
         return new_a
 
+    def _set_offset_x_from_actions(self, offset_x_actions):
+        self._offset_x[:] = self._scale_helper(
+            offset_x_actions,
+            self.offset_x_range[0],
+            self.offset_x_range[1],
+        )
+
     def get_CPG_RL_actions(self, actions, frequency_high, frequency_low, normal_forces):
         """ Map RL actions to CPG signals """
         MU_LOW = self.mu_low[0]
@@ -351,12 +364,15 @@ class CPG_RL():
         device = self._device 
         MAX_SPINE_ANGLE = torch.tensor(self._max_spine_angle, device=device) # radians
         a = torch.clip(actions, -1, 1)
+        offset_action_width = 4 if self._offset_x_from_actions else 0
         if "SPINE" in self._rl_task_string:
             if self._spine_control_mode == "direct":
-                if a.shape[1] != 9:
+                expected_actions = 9 + offset_action_width
+                if a.shape[1] != expected_actions:
                     raise ValueError(
-                        f"Direct spine expects 9 actions "
-                        f"(4 leg amplitudes + direct spine angle + 4 leg frequencies), got {a.shape[1]}"
+                        f"Direct spine expects {expected_actions} actions "
+                        f"(4 leg amplitudes + direct spine angle + 4 leg frequencies"
+                        f"{' + 4 offset_x actions' if self._offset_x_from_actions else ''}), got {a.shape[1]}"
                     )
                 leg_mu = self._scale_helper(a[:, :4], MU_LOW**2, MU_UPP**2)
                 spine_mu = torch.ones(a.shape[0], 1, dtype=torch.float, device=device) * MU_LOW**2
@@ -368,13 +384,17 @@ class CPG_RL():
                 ) * (2 * np.pi)
                 spine_frequency = torch.mean(leg_frequencies, dim=1, keepdim=True)
                 self._omega_residuals = torch.cat((leg_frequencies, spine_frequency), dim=1)
+                if self._offset_x_from_actions:
+                    self._set_offset_x_from_actions(a[:, 9:13])
             else:
                 self._mu = self._scale_helper(a[:,:5],MU_LOW**2,MU_UPP**2)
             if self._spine_control_mode != "direct" and self._spine_phase_mode == "phase_locked":
-                if a.shape[1] != 9:
+                expected_actions = 9 + offset_action_width
+                if a.shape[1] != expected_actions:
                     raise ValueError(
-                        f"Phase-locked spine expects 9 actions "
-                        f"(5 amplitudes + 4 leg frequencies), got {a.shape[1]}"
+                        f"Phase-locked spine expects {expected_actions} actions "
+                        f"(5 amplitudes + 4 leg frequencies"
+                        f"{' + 4 offset_x actions' if self._offset_x_from_actions else ''}), got {a.shape[1]}"
                     )
                 leg_frequencies = self._scale_helper(
                     a[:, 5:9],
@@ -383,20 +403,35 @@ class CPG_RL():
                 ) * (2 * np.pi)
                 spine_frequency = self._phase_locked_spine_frequency(leg_frequencies)
                 self._omega_residuals = torch.cat((leg_frequencies, spine_frequency), dim=1)
+                if self._offset_x_from_actions:
+                    self._set_offset_x_from_actions(a[:, 9:13])
             elif self._spine_control_mode != "direct":
-                if a.shape[1] != 10:
+                expected_actions = 10 + offset_action_width
+                if a.shape[1] != expected_actions:
                     raise ValueError(
-                        f"Uncoupled spine expects 10 actions "
-                        f"(5 amplitudes + 5 frequencies), got {a.shape[1]}"
+                        f"Uncoupled spine expects {expected_actions} actions "
+                        f"(5 amplitudes + 5 frequencies"
+                        f"{' + 4 offset_x actions' if self._offset_x_from_actions else ''}), got {a.shape[1]}"
                     )
                 self._omega_residuals = self._scale_helper(
                     a[:, 5:10],
                     frequency_low,
                     frequency_high,
                 ) * (2 * np.pi)
+                if self._offset_x_from_actions:
+                    self._set_offset_x_from_actions(a[:, 10:14])
         else:
+            expected_actions = 8 + offset_action_width
+            if a.shape[1] != expected_actions:
+                raise ValueError(
+                    f"CPG expects {expected_actions} actions "
+                    f"(4 amplitudes + 4 frequencies"
+                    f"{' + 4 offset_x actions' if self._offset_x_from_actions else ''}), got {a.shape[1]}"
+                )
             self._mu = self._scale_helper(a[:,:4],MU_LOW**2, MU_UPP**2)
             self._omega_residuals = self._scale_helper(a[:,4:8],frequency_low,frequency_high) * (2*np.pi)
+            if self._offset_x_from_actions:
+                self._set_offset_x_from_actions(a[:, 8:12])
         
 
         self.integrate_oscillator_equations()

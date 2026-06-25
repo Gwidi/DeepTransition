@@ -26,9 +26,9 @@ from legged_gym.envs.base.base_config import BaseConfig
 class SBRigidSpineRobotCfg(BaseConfig):
     class env:
         num_envs = 2048
-        num_observations = 70
-        num_privileged_obs = 77 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
-        num_actions = 8 
+        num_observations = 61
+        num_privileged_obs = 68 # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise
+        num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
@@ -107,7 +107,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
         }
 
     class control:
-        control_type = 'CPG_OFFSETX'
+        control_type = 'CPG_OFFSETX_ACTION'
         action_scale = 1.0
         max_step_len = 0.065  # [m], nominal speed envelope: 4 * step length * frequency
 
