@@ -150,64 +150,31 @@ class CPG_RL():
     def _set_gait(self,gait):
         device = self._device
         
-        walk = torch.tensor([[ 0, -0.5, -0.75, -0.25 ], # FL, FR, RL, RR
-                            [0.5, 0, -0.25, 0.25 ],
-                            [0.75, 0.25, 0, 0.5 ],
-                            [ 0.25, -0.25, -0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+        def phase_matrix(relative_phases):
+            """Build Phi[i, j] = phase[j] - phase[i] from leg phases in cycles.
 
-        trot = torch.tensor([[ 0, -0.5, -0.5, 0 ], # FL, FR, RL, RR
-                            [0.5, 0, 0, 0.5 ],
-                            [0.5, 0, 0, 0.5 ],
-                            [ 0, -0.5, -0.5, 0 ]],dtype=torch.float, device=device, requires_grad=False)
+            Defining one phase per leg guarantees that every pairwise phase
+            constraint is mutually consistent. Leg order is FL, FR, RL, RR.
+            """
+            phases = torch.tensor(
+                relative_phases,
+                dtype=torch.float,
+                device=device,
+                requires_grad=False,
+            )
+            return 2 * np.pi * (phases.unsqueeze(0) - phases.unsqueeze(1))
 
-        amble = torch.tensor([[ 0.0, -0.5, -0.8, -0.3 ],  # FL, FR, RL, RR
-                            [ 0.5,  0.0, -0.3,  0.2 ],
-                            [ 0.8,  0.3,  0.0,  0.5 ],
-                            [ 0.3, -0.2, -0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        pace = torch.tensor([[ 0.0, -0.5,  0.0, -0.5 ],  # FL, FR, RL, RR
-                            [ 0.5,  0.0,  0.5,  0.0 ],
-                            [ 0.0, -0.5,  0.0, -0.5 ],
-                            [ 0.5,  0.0,  0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        # bound: A=0, B=0.5, C=0.5
-        bound = torch.tensor([[ 0.0,  0.0, -0.5, -0.5 ],  # FL, FR, RL, RR
-                            [ 0.0,  0.0,  0.0, -0.5 ],
-                            [ 0.5,  0.0,  0.0,  0.5 ],
-                            [ 0.5,  0.5, -0.5,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        # pronk: A=0, B=0, C=0
-        pronk = torch.tensor([[ 0.0,  0.0,  0.0,  0.0 ],  # FL, FR, RL, RR
-                            [ 0.0,  0.0,  0.0,  0.0 ],
-                            [ 0.0,  0.0,  0.0,  0.0 ],
-                            [ 0.0,  0.0,  0.0,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        # canter: A=0.7, B=0.3, C=0
-        canter = torch.tensor([[ 0.0, -0.7, -0.3,  0.0 ],  # FL, FR, RL, RR
-                            [ 0.7,  0.0,  0.4, -0.7 ],
-                            [ 0.3, -0.4,  0.0, -0.3 ],
-                            [ 0.0,  0.7,  0.3,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        # transverse_gallop: A=-0.1, B=-0.5, C=-0.6
-        transverse_gallop = torch.tensor([[ 0.0,  0.1,  0.5,  0.6 ],   # FL, FR, RL, RR
-                            [-0.1,  0.0, -0.4, -0.5 ],
-                            [-0.5,  0.4,  0.0, -0.1 ],
-                            [-0.6,  0.5,  0.1,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-
-        # rotary_gallop: A=0.1, B=-0.4, C=-0.5
-        rotary_gallop = torch.tensor([[ 0.0, -0.1,  0.4,  0.5 ],   # FL, FR, RL, RR
-                            [ 0.1,  0.0,  0.5,  0.6 ],
-                            [-0.4, -0.5,  0.0,  0.1 ],
-                            [-0.5, -0.6, -0.1,  0.0 ]],dtype=torch.float, device=device, requires_grad=False)
-        trot = 2 * np.pi * trot
-        walk = 2 * np.pi * walk
-        amble = 2 * np.pi * amble
-        pace = 2 * np.pi * pace
-        bound = 2 * np.pi * bound
-        pronk = 2 * np.pi * pronk
-        canter = 2 * np.pi * canter
-        transverse_gallop = 2 *np.pi * transverse_gallop
-        rotary_gallop = 2 *np.pi * rotary_gallop
+        # Desired leg phases in cycles, expressed relative to FL.
+        # These preserve the first row of each previously defined gait matrix.
+        walk = phase_matrix([0.0, -0.5, -0.75, -0.25])
+        trot = phase_matrix([0.0, -0.5, -0.5, 0.0])
+        amble = phase_matrix([0.0, -0.5, -0.8, -0.3])
+        pace = phase_matrix([0.0, -0.5, 0.0, -0.5])
+        bound = phase_matrix([0.0, 0.0, -0.5, -0.5])
+        pronk = phase_matrix([0.0, 0.0, 0.0, 0.0])
+        canter = phase_matrix([0.0, -0.7, -0.3, 0.0])
+        transverse_gallop = phase_matrix([0.0, 0.1, 0.5, 0.6])
+        rotary_gallop = phase_matrix([0.0, -0.1, 0.4, 0.5])
 
         # If SPINE mode, expand all gait matrices to 5x5 with spine coupling
         if "SPINE" in self._rl_task_string:
