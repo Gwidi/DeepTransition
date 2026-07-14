@@ -176,7 +176,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
             dof_velocity_limits = 0.0
             
 
-        only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.85
