@@ -31,6 +31,7 @@
 import time
 import os
 import inspect
+import re
 from collections import deque
 import statistics
 
@@ -85,6 +86,20 @@ class OnPolicyRunner:
 
         _, _ = self.env.reset()
 
+    def _infer_wandb_group(self):
+        wandb_group = self.cfg.get("wandb_group")
+        if wandb_group:
+            return wandb_group
+
+        run_name = self.cfg.get("run_name")
+        if run_name:
+            group_name = re.sub(r"([_-]?seed[_-]?\d+)$", "", run_name, flags=re.IGNORECASE)
+            group_name = group_name.rstrip("_-")
+            if group_name:
+                return group_name
+
+        return self.cfg.get("experiment_name")
+
     def _save_wandb_source_files(self):
         if wandb.run is None or self._saved_wandb_source_files:
             return
@@ -112,6 +127,8 @@ class OnPolicyRunner:
         wandb.init(
             project=self.cfg["wandb_project"],
             entity=self.cfg["wandb_entity"],
+            name=self.cfg.get("run_name") or None,
+            group=self._infer_wandb_group(),
             notes=self.cfg.get("wandb_notes"),
             sync_tensorboard=True,
             config={"train_cfg": self.train_cfg, "env_cfg": env_cfg_dict},

@@ -256,3 +256,4 @@ class LeggedRobotCfgPPO(BaseConfig):
         resume_path = None # updated from load_run and chkpt
         wandb_project ='go1'
         wandb_entity = 'cpg_put'
+        wandb_group = ''

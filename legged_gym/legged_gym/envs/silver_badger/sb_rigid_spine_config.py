@@ -272,6 +272,7 @@ class SBRigidSpineRobotCfgPPO(BaseConfig):
         resume_path = None # updated from load_run and chkpt
         wandb_project ='silver_badger_rigid_spine'
         wandb_entity = 'cpg_put'
+        wandb_group = ''
 
 
   
