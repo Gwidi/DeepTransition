@@ -125,6 +125,7 @@ class SBActiveSpineRobotCfg(BaseConfig):
         spine_amplitude_mode = "policy"  # policy or fixed
         spine_fixed_amplitude = 0.17453292519943295  # 10 deg [rad]
         spine_control_mode = "cpg"  # cpg or direct
+        max_step_len = 0.16
 
 
 
