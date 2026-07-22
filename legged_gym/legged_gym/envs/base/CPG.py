@@ -40,7 +40,7 @@ class CPG_RL():
     def __init__(self,
           omega_swing=8*2*np.pi,
           omega_stance=2*2*np.pi,
-          gait="BOUND",
+          gait="TROT",
           couple=True,
           coupling_strength=10,
           time_step=0.001,
@@ -118,9 +118,9 @@ class CPG_RL():
 
         self._des_step_len = des_step_len
 
-        self.robot_height_range = [0.18, 0.35] # min and max height of the CPG oscillation center
-        self.ground_clearance_range = [0.02, 0.12]
-        self.ground_penetration_range = [0.0, 0.015]
+        self.robot_height_range = [0.26, 0.285] # min and max height of the CPG oscillation center
+        self.ground_clearance_range = [0.035, 0.055]
+        self.ground_penetration_range = [0.002, 0.006]
         self.offset_x_range = [-0.035, -0.005]
 
     def reset(self,env_ids):
