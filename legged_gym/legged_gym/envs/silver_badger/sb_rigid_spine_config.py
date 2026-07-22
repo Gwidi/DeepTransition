@@ -109,7 +109,7 @@ class SBRigidSpineRobotCfg(BaseConfig):
     class control:
         control_type = 'CPG_OFFSETX_ACTION'
         action_scale = 1.0
-        max_step_len = 0.065  # [m], nominal speed envelope: 4 * step length * frequency
+        max_step_len = 0.16  # [m], nominal speed envelope: 4 * step length * frequency
 
         decimation = 10
         stiffness = {'j': 71.23}  # [N*m/rad]
