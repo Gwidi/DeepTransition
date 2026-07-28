@@ -45,6 +45,7 @@ DEFAULT_GAITS = [
 ]
 
 DEFAULT_SPEEDS = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2]
+MIN_COT_DISTANCE_M = 0.01
 
 SUMMARY_FIELDS = [
     "variant",
@@ -615,7 +616,11 @@ def make_episode_rows(
         measurement_time = count * dt
         mean_power = finite_divide(total_energy, measurement_time)
         cot_denominator = robot_mass * 9.81 * distance
-        cot = finite_divide(total_energy, cot_denominator)
+        cot = (
+            finite_divide(total_energy, cot_denominator)
+            if distance >= MIN_COT_DISTANCE_M
+            else math.nan
+        )
         applied_saturation = finite_divide(
             float(arrays["leg_saturated"][episode]),
             float(arrays["leg_actuator_samples"][episode]),
@@ -911,7 +916,14 @@ def aggregate_rows(rows: Sequence[Mapping[str, str]]) -> Tuple[List[Dict[str, An
             "episodes": len(group),
         }
         for metric in AGGREGATE_METRICS:
-            values = [to_float(row.get(metric)) for row in group]
+            metric_rows = group
+            if metric == "cost_of_transport":
+                metric_rows = [
+                    row
+                    for row in group
+                    if to_float(row.get("distance_m")) >= MIN_COT_DISTANCE_M
+                ]
+            values = [to_float(row.get(metric)) for row in metric_rows]
             values = [value for value in values if math.isfinite(value)]
             if values:
                 mean = statistics.fmean(values)
@@ -983,6 +995,7 @@ def make_comparison_plots(aggregate: Sequence[Mapping[str, Any]], output_dir: Pa
     plot_metric("mean_velocity_mps", "Measured velocity [m/s]", "velocity_tracking.png", identity=True)
     plot_metric("velocity_rmse_mps", "Velocity RMSE [m/s]", "velocity_rmse.png")
     plot_metric("phase_error_deg", "CPG phase error [deg]", "phase_error.png")
+    plot_metric("cost_of_transport", "Mechanical cost of transport [-]", "cost_of_transport.png")
     plot_metric(
         "leg_torque_saturation_fraction",
         "Applied torque saturation fraction",
